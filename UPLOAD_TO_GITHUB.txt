@@ -1,14 +1,21 @@
-PGDS AI WEB TUTOR — UPLOAD INSTRUCTIONS
+DS AI WEB TUTOR — UPDATE INSTRUCTIONS
+
+This version expands every unit into a complete learning studio: Unit 1
+(15-topic linear algebra deep dive) plus newly expanded Units 2-5
+(probability & Bayes, distributions & simulation, data prep & PCA,
+statistical modelling & decisions) — each with guided concept cards,
+live interactive labs, missions, a Python code panel, a misconception
+buster and a mastery quiz.
 
 1. Extract this ZIP on your computer.
-2. Open: https://github.com/MohamedMEC/PGDS
-3. Select "uploading an existing file" (or Add file > Upload files).
+2. Open: https://github.com/MohamedMEC/DS
+3. Select Add file > Upload files.
 4. Drag all extracted project files and folders into the upload area.
-5. Enter commit message: Add AI Web Tutor
+5. Enter commit message: Expand Units 2-5 into full learning studios
 6. Select "Commit changes".
 7. Open the repository's Actions tab and allow the deployment to finish.
 8. The student website will be:
-   https://mohamedmec.github.io/PGDS/
+   https://mohamedmec.github.io/DS/
 
 If GitHub Pages asks for a source:
 Settings > Pages > Build and deployment > Source > GitHub Actions.
