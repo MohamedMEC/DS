@@ -176,9 +176,9 @@ const chapters: Chapter[] = [
     title: "Linear systems: where constraints meet",
     short: "Linear systems",
     icon: Equal,
-    meaning: "A linear system asks for values that satisfy several equations at the same time. Geometrically, a 2×2 system asks where two lines meet.",
-    example: "x+y=5 and x−y=1 meet at x=3, y=2. The same answer is written Ax=b.",
-    formula: "Ax=b   •   If A is invertible: x=A⁻¹b   •   In practice: solve(A,b)",
+    meaning: "A linear system asks for values that satisfy several equations at the same time. Geometrically, a 2×2 system asks where two lines meet — a 3×3 system asks where three planes meet, and the same three outcomes apply: exactly one point, a shared line or plane of infinitely many points, or no point at all.",
+    example: "x+y=5 and x−y=1 meet at x=3, y=2. The same answer is written Ax=b. In 3D, three planes can meet at one point, share a whole line, or miss each other entirely — the lab below lets you switch to that view.",
+    formula: "Ax=b   •   If A is invertible: x=A⁻¹b   •   In practice: solve(A,b)   •   3×3: solution type follows rank(A) vs rank([A|b])",
     ml: "Calibration, optimisation, circuit analysis and many fitting algorithms reduce to solving linear systems.",
     check: { q: "Two different parallel lines have how many exact solutions?", options: ["One", "None", "Infinitely many"], answer: 1, why: "Parallel lines never meet, so no point satisfies both equations." },
   },
@@ -279,7 +279,7 @@ const missions: Record<string, string[]> = {
   transform: ["Rotate the unit square by 90°.", "Create a shear without changing area.", "Find a matrix that reflects the square."],
   multiply: ["Apply rotation then stretch and record the output.", "Reverse the order and compare the result.", "Find two matrices for which AB=BA."],
   determinant: ["Make area scale equal 6.", "Create a negative determinant and observe the flip.", "Set determinant to zero and explain the information loss."],
-  systems: ["Produce the solution [3,2].", "Create different parallel equations with no solution.", "Create two equations representing the same line."],
+  systems: ["Produce the solution [3,2].", "Create different parallel equations with no solution.", "Create two equations representing the same line.", "Switch to 3×3 (planes) and make three planes meet at exactly one point."],
   rank: ["Construct a rank-2 matrix.", "Make row 2 exactly three times row 1.", "Use the displayed null vector to verify Av=0."],
   orthogonal: ["Start with two non-perpendicular vectors.", "Use Gram–Schmidt and verify q₁·q₂=0.", "Make the original vectors parallel and observe the failure."],
   conditioning: ["Set ε=1 and compare both solutions.", "Move ε close to zero and add tiny noise.", "Explain why full rank alone does not guarantee stability."],
@@ -469,7 +469,76 @@ function LayerLab(){
   return <LabShell title="From matrix multiplication to one neuron" goal="Follow two inputs through weights, addition, bias and ReLU."><div className="u1-network"><div className="u1-node-col"><label><span>x₁</span><input type="number" step=".5" value={x1} onChange={e=>setX1(Number(e.target.value))}/><small>study hours</small></label><label><span>x₂</span><input type="number" step=".5" value={x2} onChange={e=>setX2(Number(e.target.value))}/><small>practice tasks</small></label></div><div className="u1-weights"><MiniRange label="weight w₁" value={w1} min={-2} max={2} step={.25} onChange={setW1}/><MiniRange label="weight w₂" value={w2} min={-2} max={2} step={.25} onChange={setW2}/><MiniRange label="bias b" value={bias} min={-2} max={2} step={.25} onChange={setBias}/></div><ArrowRight/><div className="u1-neuron"><Cpu/><span>Weighted sum</span><strong>{f(x1)}({f(w1)}) + {f(x2)}({f(w2)}) + {f(bias)} = {f(z)}</strong></div><ArrowRight/><div className="u1-output"><span>ReLU output</span><strong>{f(relu)}</strong><small>max(0, z)</small></div></div><div className="u1-code-line"><Code2/><code>x @ w + b = [{f(x1)}, {f(x2)}] · [{f(w1)}, {f(w2)}] + {f(bias)} = {f(z)}</code></div></LabShell>
 }
 
+// ---- 3x3 system helpers (shared by the 3D "planes" mode below) ----
+const SYS3_L = 3; // half-width of the cubic view volume each plane gets clipped against
+function cubeEdges3(L:number){
+  const V:[number,number,number][]=[];
+  for(const x of [-L,L]) for(const y of [-L,L]) for(const z of [-L,L]) V.push([x,y,z]);
+  const edges:[[number,number,number],[number,number,number]][]=[];
+  for(let i=0;i<V.length;i++) for(let j=i+1;j<V.length;j++){
+    let diff=0; for(let k=0;k<3;k++) if(V[i][k]!==V[j][k]) diff++;
+    if(diff===1) edges.push([V[i],V[j]]);
+  }
+  return edges;
+}
+const SYS3_EDGES=cubeEdges3(SYS3_L);
+// Clip plane ax+by+cz=d against the view cube and return its cross-section as an ordered
+// polygon (3D points, ready to project) — or null when the plane is degenerate (0=d) or
+// misses the cube entirely. Standard technique: intersect every cube edge with the plane,
+// then order the resulting points by angle around their centroid in the plane's own basis.
+function planeCubePolygon(a:number,b:number,c:number,d:number):[number,number,number][]|null{
+  const mag=Math.hypot(a,b,c);
+  if(mag<1e-6) return null;
+  const pts:[number,number,number][]=[];
+  for(const [p0,p1] of SYS3_EDGES){
+    const dx=p1[0]-p0[0],dy=p1[1]-p0[1],dz=p1[2]-p0[2],denom=a*dx+b*dy+c*dz;
+    if(Math.abs(denom)<1e-9) continue;
+    const t=(d-(a*p0[0]+b*p0[1]+c*p0[2]))/denom;
+    if(t<-1e-6||t>1+1e-6) continue;
+    const pt:[number,number,number]=[p0[0]+t*dx,p0[1]+t*dy,p0[2]+t*dz];
+    if(!pts.some(q=>Math.hypot(q[0]-pt[0],q[1]-pt[1],q[2]-pt[2])<1e-4)) pts.push(pt);
+  }
+  if(pts.length<3) return null;
+  const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length,cy=pts.reduce((s,p)=>s+p[1],0)/pts.length,cz=pts.reduce((s,p)=>s+p[2],0)/pts.length;
+  const n=[a/mag,b/mag,c/mag];
+  let u=Math.abs(n[0])<0.9?[1,0,0]:[0,1,0];
+  const dot=u[0]*n[0]+u[1]*n[1]+u[2]*n[2];
+  u=[u[0]-dot*n[0],u[1]-dot*n[1],u[2]-dot*n[2]];
+  const ulen=Math.hypot(u[0],u[1],u[2])||1; u=[u[0]/ulen,u[1]/ulen,u[2]/ulen];
+  const v=[n[1]*u[2]-n[2]*u[1],n[2]*u[0]-n[0]*u[2],n[0]*u[1]-n[1]*u[0]];
+  const angle=(p:[number,number,number])=>{const rx=p[0]-cx,ry=p[1]-cy,rz=p[2]-cz;return Math.atan2(rx*v[0]+ry*v[1]+rz*v[2],rx*u[0]+ry*u[1]+rz*u[2])};
+  return [...pts].sort((p,q)=>angle(p)-angle(q));
+}
+// Classify a 3x3 system by comparing rank(A) to rank([A|b]) via Gauss-Jordan elimination:
+// rank(A)=3 -> unique solution; rank(A)<3 but ranks match -> infinitely many; ranks differ -> none.
+function classify3(A:number[][],b:number[]){
+  const M=A.map((row,i)=>[...row,b[i]]);
+  let rank=0;
+  for(let col=0;col<3&&rank<3;col++){
+    let piv=rank;
+    for(let r=rank+1;r<3;r++) if(Math.abs(M[r][col])>Math.abs(M[piv][col])) piv=r;
+    if(Math.abs(M[piv][col])<1e-9) continue;
+    [M[rank],M[piv]]=[M[piv],M[rank]];
+    for(let r=0;r<3;r++){ if(r===rank) continue; const factor=M[r][col]/M[rank][col]; for(let c2=col;c2<=3;c2++) M[r][c2]-=factor*M[rank][c2]; }
+    rank++;
+  }
+  let consistent=true;
+  for(let r=0;r<3;r++){ const rowZero=Math.abs(M[r][0])<1e-7&&Math.abs(M[r][1])<1e-7&&Math.abs(M[r][2])<1e-7; if(rowZero&&Math.abs(M[r][3])>1e-6) consistent=false; }
+  const type:"unique"|"infinite"|"none"=rank===3?"unique":consistent?"infinite":"none";
+  let x:[number,number,number]|null=null;
+  if(type==="unique"){
+    const det3=(m:number[][])=>m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+    const D=det3(A);
+    const Ax=[[b[0],A[0][1],A[0][2]],[b[1],A[1][1],A[1][2]],[b[2],A[2][1],A[2][2]]];
+    const Ay=[[A[0][0],b[0],A[0][2]],[A[1][0],b[1],A[1][2]],[A[2][0],b[2],A[2][2]]];
+    const Az=[[A[0][0],A[0][1],b[0]],[A[1][0],A[1][1],b[1]],[A[2][0],A[2][1],b[2]]];
+    x=[det3(Ax)/D,det3(Ay)/D,det3(Az)/D];
+  }
+  return {rank,type,x};
+}
+
 function SystemsLab(){
+  const[mode,setMode]=useState<"2d"|"3d">("2d");
   const[a,setA]=useState(1),[b,setB]=useState(1),[c,setC]=useState(1),[d,setD]=useState(-1),[e,setE]=useState(5),[g,setG]=useState(1);const det=a*d-b*c,x=det?(e*d-b*g)/det:0,y=det?(a*g-e*c)/det:0;
   const line=(aa:number,bb:number,cc:number)=>{
     if(Math.abs(bb)>.001) return {x1:sx(-4),y1:sy((cc-aa*(-4))/bb),x2:sx(4),y2:sy((cc-aa*4)/bb)};
@@ -478,7 +547,41 @@ function SystemsLab(){
   };
   const l1=line(a,b,e),l2=line(c,d,g);
   const degenerate=!l1||!l2;
-  return <LabShell title="Solve Ax=b and see the intersection" goal="Change either equation. A non-zero determinant produces one exact meeting point."><div className="u1-lab-grid"><div className="u1-controls"><div className="u1-system-input"><div><NumberBox label="a₁" value={a} onChange={setA}/><span>x +</span><NumberBox label="b₁" value={b} onChange={setB}/><span>y =</span><NumberBox label="c₁" value={e} onChange={setE}/></div><div><NumberBox label="a₂" value={c} onChange={setC}/><span>x +</span><NumberBox label="b₂" value={d} onChange={setD}/><span>y =</span><NumberBox label="c₂" value={g} onChange={setG}/></div></div><div className="u1-presets vertical"><button onClick={()=>{setA(1);setB(1);setE(5);setC(1);setD(-1);setG(1)}}>One solution</button><button onClick={()=>{setA(1);setB(2);setE(4);setC(2);setD(4);setG(11)}}>Parallel: no solution</button><button onClick={()=>{setA(1);setB(2);setE(4);setC(2);setD(4);setG(8)}}>Same line: infinite</button></div><div className="u1-stats"><Stat label="det(A)" value={f(det)} good={Math.abs(det)>.001}/><Stat label="Solution" value={Math.abs(det)>.001?`[${f(x)}, ${f(y)}]`:"Not unique"}/></div></div><div className="u1-visual"><Plane>{l1&&<line {...l1} className="u1-system-line one"/>}{l2&&<line {...l2} className="u1-system-line two"/>}{Math.abs(det)>.001&&Math.abs(x)<=4&&Math.abs(y)<=4&&<circle cx={sx(x)} cy={sy(y)} r="7" className="u1-intersection"/>}</Plane></div></div><div className="u1-solve-steps"><b>Substitution check</b>{degenerate?<span>An equation with both coefficients set to 0 (0x+0y=c) has no line to draw — give x or y a non-zero coefficient.</span>:Math.abs(det)>.001?<><span>Equation 1: {f(a)}({f(x)}) + {f(b)}({f(y)}) = <strong>{f(a*x+b*y)}</strong></span><span>Equation 2: {f(c)}({f(x)}) + {f(d)}({f(y)}) = <strong>{f(c*x+d*y)}</strong></span></>:<span>det(A)=0, so the rows are dependent. Check whether the lines are parallel or identical.</span>}</div></LabShell>
+
+  // Small, cube-friendly coefficients so every preset's planes (and the solution point,
+  // when unique) stay visible inside the fixed [-SYS3_L,SYS3_L] view cube below.
+  const[M3,setM3]=useState([[1,1,1],[1,-1,1],[1,1,-1]]),[b3,setB3]=useState([3,1,1]);
+  const setCoef=(r:number,cIdx:number,v:number)=>setM3(m=>m.map((row,i)=>i===r?row.map((x2,j)=>j===cIdx?v:x2):row));
+  const setConst=(r:number,v:number)=>setB3(bv=>bv.map((x2,i)=>i===r?v:x2));
+  const preset3=(name:string)=>{
+    if(name==="unique"){setM3([[1,1,1],[1,-1,1],[1,1,-1]]);setB3([3,1,1])} // planes meet at [1,1,1]
+    if(name==="none"){setM3([[1,1,1],[1,1,1],[1,1,1]]);setB3([3,5,7])} // three parallel planes, never meet
+    if(name==="line"){setM3([[1,0,0],[0,1,0],[1,1,0]]);setB3([1,1,2])} // share the vertical line x=1,y=1
+    if(name==="coincide"){setM3([[1,1,1],[2,2,2],[-1,-1,-1]]);setB3([3,6,-3])} // all three are the same plane
+  };
+  const {rank,type,x:sol3}=classify3(M3,b3);
+  const planeColors=["a","b","c"] as const;
+  const axisEnd=(vx:number,vy:number,vz:number)=>{const p=iso(vx,vy,vz);return {x:sx(p.x),y:sy(p.y)}};
+
+  return <LabShell title="Solve Ax=b and see where the equations meet" goal="Toggle between a 2×2 system (two lines) and a 3×3 system (three planes) and watch the solution type follow the geometry.">
+    <div className="u1-order-toggle"><button className={mode==="2d"?"active":""} onClick={()=>setMode("2d")}><Equal aria-hidden="true"/> 2×2 (lines)</button><button className={mode==="3d"?"active":""} onClick={()=>setMode("3d")}><Axis3D aria-hidden="true"/> 3×3 (planes)</button></div>
+    {mode==="2d"?<><div className="u1-lab-grid"><div className="u1-controls"><div className="u1-system-input"><div><NumberBox label="a₁" value={a} onChange={setA}/><span>x +</span><NumberBox label="b₁" value={b} onChange={setB}/><span>y =</span><NumberBox label="c₁" value={e} onChange={setE}/></div><div><NumberBox label="a₂" value={c} onChange={setC}/><span>x +</span><NumberBox label="b₂" value={d} onChange={setD}/><span>y =</span><NumberBox label="c₂" value={g} onChange={setG}/></div></div><div className="u1-presets vertical"><button onClick={()=>{setA(1);setB(1);setE(5);setC(1);setD(-1);setG(1)}}>One solution</button><button onClick={()=>{setA(1);setB(2);setE(4);setC(2);setD(4);setG(11)}}>Parallel: no solution</button><button onClick={()=>{setA(1);setB(2);setE(4);setC(2);setD(4);setG(8)}}>Same line: infinite</button></div><div className="u1-stats"><Stat label="det(A)" value={f(det)} good={Math.abs(det)>.001}/><Stat label="Solution" value={Math.abs(det)>.001?`[${f(x)}, ${f(y)}]`:"Not unique"}/></div></div><div className="u1-visual"><Plane>{l1&&<line {...l1} className="u1-system-line one"/>}{l2&&<line {...l2} className="u1-system-line two"/>}{Math.abs(det)>.001&&Math.abs(x)<=4&&Math.abs(y)<=4&&<circle cx={sx(x)} cy={sy(y)} r="7" className="u1-intersection"/>}</Plane></div></div><div className="u1-solve-steps"><b>Substitution check</b>{degenerate?<span>An equation with both coefficients set to 0 (0x+0y=c) has no line to draw — give x or y a non-zero coefficient.</span>:Math.abs(det)>.001?<><span>Equation 1: {f(a)}({f(x)}) + {f(b)}({f(y)}) = <strong>{f(a*x+b*y)}</strong></span><span>Equation 2: {f(c)}({f(x)}) + {f(d)}({f(y)}) = <strong>{f(c*x+d*y)}</strong></span></>:<span>det(A)=0, so the rows are dependent. Check whether the lines are parallel or identical.</span>}</div></>:<>
+      <div className="u1-presets"><button onClick={()=>preset3("unique")}>Unique intersection</button><button onClick={()=>preset3("none")}>Parallel planes: no solution</button><button onClick={()=>preset3("line")}>Line of intersection: infinite</button><button onClick={()=>preset3("coincide")}>All three coincide: infinite</button></div>
+      <div className="u1-lab-grid"><div className="u1-controls">
+        <div className="u1-system-input">{M3.map((row,r)=><div key={r}><NumberBox label={`a${r+1}`} value={row[0]} onChange={v=>setCoef(r,0,v)}/><span>x +</span><NumberBox label={`b${r+1}`} value={row[1]} onChange={v=>setCoef(r,1,v)}/><span>y +</span><NumberBox label={`c${r+1}`} value={row[2]} onChange={v=>setCoef(r,2,v)}/><span>z =</span><NumberBox label={`d${r+1}`} value={b3[r]} onChange={v=>setConst(r,v)}/></div>)}</div>
+        <div className="u1-stats"><Stat label="rank(A)" value={`${rank} of 3`} good={rank===3}/><Stat label="Solution type" value={type==="unique"?"Unique":type==="infinite"?"Infinite":"No solution"} good={type==="unique"}/></div>
+        {type==="unique"&&sol3&&<div className="u1-equation-stack"><span>x = [{f(sol3[0])}, {f(sol3[1])}, {f(sol3[2])}]</span></div>}
+        <div className={`u1-observation ${type==="unique"?"":"warn"}`}>{type==="unique"?<Check aria-hidden="true"/>:<CircleHelp aria-hidden="true"/>}<p>{type==="unique"?<><b>Unique solution:</b> rank(A)=3, so all three planes meet at exactly one point — the three constraints pin down x, y and z.</>:type==="infinite"?<><b>Infinitely many solutions:</b> rank(A)={rank}&lt;3 but the system is still consistent — the planes share a common line (or all three coincide), so any point on it satisfies every equation.</>:<><b>No solution:</b> rank(A)={rank}, but adding the constants raises the augmented rank — the planes are parallel enough that no single point lies on all three at once.</>}</p></div>
+      </div>
+        <div className="u1-visual"><svg className="u1-plane" viewBox="0 0 420 380" role="img" aria-label={`Isometric view of three planes for a 3 by 3 linear system, currently classified as ${type==="unique"?"a unique solution":type==="infinite"?"infinitely many solutions":"no solution"}`}>
+          <line {...(()=>{const p0=axisEnd(-SYS3_L,0,0),p1=axisEnd(SYS3_L,0,0);return {x1:p0.x,y1:p0.y,x2:p1.x,y2:p1.y}})()} className="u1-axis"/>
+          <line {...(()=>{const p0=axisEnd(0,-SYS3_L,0),p1=axisEnd(0,SYS3_L,0);return {x1:p0.x,y1:p0.y,x2:p1.x,y2:p1.y}})()} className="u1-axis"/>
+          <line {...(()=>{const p0=axisEnd(0,0,-SYS3_L),p1=axisEnd(0,0,SYS3_L);return {x1:p0.x,y1:p0.y,x2:p1.x,y2:p1.y}})()} className="u1-axis"/>
+          {M3.map((row,i)=>{const poly=planeCubePolygon(row[0],row[1],row[2],b3[i]); if(!poly) return null; const pts=poly.map(p=>{const q=iso(p[0],p[1],p[2]);return `${sx(q.x)},${sy(q.y)}`}).join(" "); return <polygon key={i} points={pts} className={`u1-plane3-${planeColors[i]}`}/>})}
+          {type==="unique"&&sol3&&(()=>{const p=axisEnd(sol3[0],sol3[1],sol3[2]);return <circle cx={p.x} cy={p.y} r="7" className="u1-intersection"/>})()}
+        </svg><div className="u1-legend"><span className="v1">plane 1</span><span className="v2">plane 2</span><span className="eig">plane 3</span>{type==="unique"&&<span className="target">solution</span>}</div></div></div>
+    </>}
+  </LabShell>
 }
 
 function RankLab(){
