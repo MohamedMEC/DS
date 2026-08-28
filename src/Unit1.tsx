@@ -273,7 +273,7 @@ const missions: Record<string, string[]> = {
   "vector-addition": ["Make u+v equal exactly [4,3].", "Find two different pairs of u,v that both sum to [5,0].", "Confirm u+v equals v+u by swapping the sliders."],
   "vector-subtraction": ["Make the distance ‖u−v‖ exactly 5.", "Move u and v so they become equal — confirm the distance drops to 0.", "Swap u and v and confirm u−v flips sign but keeps the same length."],
   "cross-product": ["Make a and b both lie flat in the xy-plane and confirm a×b points purely along z.", "Make a and b parallel and confirm a×b becomes the zero vector.", "Swap a and b and confirm a×b flips direction (anticommutativity)."],
-  span: ["Create two independent vectors with determinant 1.", "Collapse the parallelogram by making the vectors parallel.", "Use c₁ and c₂ to reach the point [3,2]."],
+  span: ["Create two independent vectors with determinant 1.", "Make the vectors parallel and watch the shaded plane collapse into a single line — try moving the target off that line.", "Use c₁ and c₂ (or Auto-solve) to make the marker land exactly on the target — watch the 'Distance to target' stat hit 0."],
   dot: ["Project u=[3,2] onto the horizontal axis.", "Choose u and v so the projection equals u.", "Make the remainder·v equal zero and explain why."],
   basis: ["Express [4,2] using basis [1,1] and [1,−1].", "Change the basis without moving the target point.", "Make the basis singular and explain why coordinates stop being unique."],
   transform: ["Rotate the unit square by 90°.", "Create a shear without changing area.", "Find a matrix that reflects the square."],
@@ -347,21 +347,53 @@ function Plane({ children, label = "Interactive coordinate plane" }: { children:
   </svg>;
 }
 
-function VectorLab({ mode }: { mode: "add" | "span" }) {
-  const [ax,setAx]=useState(2),[ay,setAy]=useState(1),[bx,setBx]=useState(1),[by,setBy]=useState(2),[c1,setC1]=useState(1),[c2,setC2]=useState(1);
-  const det=ax*by-ay*bx, dot=ax*bx+ay*by, magA=Math.hypot(ax,ay), magB=Math.hypot(bx,by);
+function VectorLab() {
+  const [ax,setAx]=useState(2),[ay,setAy]=useState(1),[bx,setBx]=useState(1),[by,setBy]=useState(2);
+  const dot=ax*bx+ay*by, magA=Math.hypot(ax,ay), magB=Math.hypot(bx,by);
   const angle=magA&&magB?Math.acos(clamp(dot/(magA*magB),-1,1))*180/Math.PI:0;
-  const tx=c1*ax+c2*bx,ty=c1*ay+c2*by;
   // Angle arc between v1 and v2, drawn in screen space (svg y grows downward, so flip the y component).
-  const showArc = mode==="add" && magA>0.001 && magB>0.001;
+  const showArc = magA>0.001 && magB>0.001;
   const a1sc=Math.atan2(-ay,ax), a2sc=Math.atan2(-by,bx);
   let arcDiff=a2sc-a1sc; while(arcDiff<=-Math.PI) arcDiff+=2*Math.PI; while(arcDiff>Math.PI) arcDiff-=2*Math.PI;
   const arcR=32, arcX1=sx(0)+arcR*Math.cos(a1sc), arcY1=sy(0)+arcR*Math.sin(a1sc), arcX2=sx(0)+arcR*Math.cos(a1sc+arcDiff), arcY2=sy(0)+arcR*Math.sin(a1sc+arcDiff), arcSweep=arcDiff>=0?1:0;
   const midA=a1sc+arcDiff/2, labelX=sx(0)+(arcR+15)*Math.cos(midA), labelY=sy(0)+(arcR+15)*Math.sin(midA);
-  return <LabShell title={mode==="add"?"Build, add and compare two vectors":"Can these two vectors reach the plane?"} goal={mode==="add"?"Change components and connect the arrows to the numbers.":"Make the vectors parallel, then watch 2D reach collapse to one line."}>
-    <div className="u1-lab-grid"><div className="u1-controls"><div className="u1-control-pair"><NumberBox label="v₁.x" value={ax} onChange={setAx}/><NumberBox label="v₁.y" value={ay} onChange={setAy}/><NumberBox label="v₂.x" value={bx} onChange={setBx}/><NumberBox label="v₂.y" value={by} onChange={setBy}/></div>{mode==="span"&&<><MiniRange label="coefficient c₁" value={c1} min={-2} max={2} step={.5} onChange={setC1}/><MiniRange label="coefficient c₂" value={c2} min={-2} max={2} step={.5} onChange={setC2}/><button className="u1-preset" onClick={()=>{setBx(ax*2);setBy(ay*2)}}>Make v₂ parallel to v₁</button></>}<div className="u1-stats">{mode==="add"?<><Stat label="‖v₁‖" value={f(magA)}/><Stat label="v₁·v₂" value={f(dot)}/><Stat label="Angle between v₁ and v₂" value={`${f(angle,1)}°`}/><Stat label="v₁+v₂" value={`[${f(ax+bx)}, ${f(ay+by)}]`}/></>:<><Stat label="det([v₁ v₂])" value={f(det)} good={Math.abs(det)>.001}/><Stat label="Status" value={Math.abs(det)>.001?"Independent":"Dependent"}/><Stat label="Combination" value={`[${f(tx)}, ${f(ty)}]`}/></>}</div></div>
-      <div className="u1-visual"><Plane>{mode==="span"&&<polygon points={`${sx(0)},${sy(0)} ${sx(ax*c1)},${sy(ay*c1)} ${sx(tx)},${sy(ty)} ${sx(bx*c2)},${sy(by*c2)}`} className="u1-span-area"/>}<line x1={sx(0)} y1={sy(0)} x2={sx(ax)} y2={sy(ay)} className="u1-v1" markerEnd="url(#arrow-purple)"/><line x1={sx(0)} y1={sy(0)} x2={sx(bx)} y2={sy(by)} className="u1-v2" markerEnd="url(#arrow-coral)"/>{mode==="add"?<line x1={sx(0)} y1={sy(0)} x2={sx(ax+bx)} y2={sy(ay+by)} className="u1-vsum" markerEnd="url(#arrow-green)"/>:<line x1={sx(0)} y1={sy(0)} x2={sx(tx)} y2={sy(ty)} className="u1-vsum" markerEnd="url(#arrow-green)"/>}{showArc&&<path d={`M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 0 ${arcSweep} ${arcX2} ${arcY2}`} className="u1-angle-arc"/>}{showArc&&<text x={labelX} y={labelY} textAnchor="middle" className="u1-angle-label">{f(angle,1)}°</text>}</Plane><div className="u1-legend"><span className="v1">v₁</span><span className="v2">v₂</span><span className="sum">{mode==="add"?"v₁+v₂":"c₁v₁+c₂v₂"}</span>{showArc&&<span className="angle">∠ = {f(angle,1)}°</span>}</div></div></div>
-    <div className="u1-observation"><Eye/><p><b>Observe:</b> {mode==="add"?`the dot product is ${f(dot)}, and the angle between v₁ and v₂ is ${f(angle,1)}°. ${Math.abs(dot)<.001?"The vectors are perpendicular.":dot>0?"They point generally in the same direction.":"They point generally in opposite directions."}`:Math.abs(det)<.001?"The parallelogram has zero area. One vector adds no new direction, so rank falls to 1.":`The parallelogram area is |${f(det)}|. Two independent directions span the entire 2D plane.`}</p></div>
+  return <LabShell title="Build, add and compare two vectors" goal="Change components and connect the arrows to the numbers.">
+    <div className="u1-lab-grid"><div className="u1-controls"><div className="u1-control-pair"><NumberBox label="v₁.x" value={ax} onChange={setAx}/><NumberBox label="v₁.y" value={ay} onChange={setAy}/><NumberBox label="v₂.x" value={bx} onChange={setBx}/><NumberBox label="v₂.y" value={by} onChange={setBy}/></div><div className="u1-stats"><Stat label="‖v₁‖" value={f(magA)}/><Stat label="v₁·v₂" value={f(dot)}/><Stat label="Angle between v₁ and v₂" value={`${f(angle,1)}°`}/><Stat label="v₁+v₂" value={`[${f(ax+bx)}, ${f(ay+by)}]`}/></div></div>
+      <div className="u1-visual"><Plane><line x1={sx(0)} y1={sy(0)} x2={sx(ax)} y2={sy(ay)} className="u1-v1" markerEnd="url(#arrow-purple)"/><line x1={sx(0)} y1={sy(0)} x2={sx(bx)} y2={sy(by)} className="u1-v2" markerEnd="url(#arrow-coral)"/><line x1={sx(0)} y1={sy(0)} x2={sx(ax+bx)} y2={sy(ay+by)} className="u1-vsum" markerEnd="url(#arrow-green)"/>{showArc&&<path d={`M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 0 ${arcSweep} ${arcX2} ${arcY2}`} className="u1-angle-arc"/>}{showArc&&<text x={labelX} y={labelY} textAnchor="middle" className="u1-angle-label">{f(angle,1)}°</text>}</Plane><div className="u1-legend"><span className="v1">v₁</span><span className="v2">v₂</span><span className="sum">v₁+v₂</span>{showArc&&<span className="angle">∠ = {f(angle,1)}°</span>}</div></div></div>
+    <div className="u1-observation"><Eye/><p><b>Observe:</b> the dot product is {f(dot)}, and the angle between v₁ and v₂ is {f(angle,1)}°. {Math.abs(dot)<.001?"The vectors are perpendicular.":dot>0?"They point generally in the same direction.":"They point generally in opposite directions."}</p></div>
+  </LabShell>;
+}
+
+function SpanLab(){
+  const [ax,setAx]=useState(2),[ay,setAy]=useState(1),[bx,setBx]=useState(1),[by,setBy]=useState(2),[c1,setC1]=useState(1),[c2,setC2]=useState(1);
+  const [gx,setGx]=useState(3),[gy,setGy]=useState(2);
+  const det=ax*by-ay*bx, magA=Math.hypot(ax,ay), magB=Math.hypot(bx,by), independent=Math.abs(det)>.001, zeroBoth=magA<.001&&magB<.001;
+  const tx=c1*ax+c2*bx, ty=c1*ay+c2*by;
+  const dist=Math.hypot(tx-gx,ty-gy), reached=dist<.05;
+  const solve=()=>{ if(!independent) return; setC1(Math.round((gx*by-bx*gy)/det*100)/100); setC2(Math.round((ax*gy-gx*ay)/det*100)/100); };
+  const lattice:{x:number;y:number}[]=[];
+  for(let i=-2;i<=2;i++) for(let j=-2;j<=2;j++) lattice.push({x:i*ax+j*bx,y:i*ay+j*by});
+  const dirX=magA>.001?ax/magA:(magB>.001?bx/magB:0), dirY=magA>.001?ay/magA:(magB>.001?by/magB:0);
+  return <LabShell title="Can these two vectors reach the target?" goal="Adjust c₁ and c₂ — or click Auto-solve — to land the green marker exactly on the target. That reachable set is the span.">
+    <div className="u1-lab-grid"><div className="u1-controls">
+      <div className="u1-control-pair"><NumberBox label="v₁.x" value={ax} onChange={setAx}/><NumberBox label="v₁.y" value={ay} onChange={setAy}/><NumberBox label="v₂.x" value={bx} onChange={setBx}/><NumberBox label="v₂.y" value={by} onChange={setBy}/></div>
+      <div className="u1-control-pair"><NumberBox label="target x" value={gx} onChange={setGx}/><NumberBox label="target y" value={gy} onChange={setGy}/></div>
+      <MiniRange label="coefficient c₁" value={c1} min={-3} max={3} step={.25} onChange={setC1}/>
+      <MiniRange label="coefficient c₂" value={c2} min={-3} max={3} step={.25} onChange={setC2}/>
+      <div className="u1-presets"><button className="u1-preset" onClick={()=>{setBx(ax*2);setBy(ay*2)}}>Make v₂ parallel to v₁</button><button className="u1-preset" onClick={solve} disabled={!independent}><WandSparkles/>Auto-solve for target</button></div>
+      <div className="u1-stats"><Stat label="det([v₁ v₂])" value={f(det)} good={independent}/><Stat label="Status" value={independent?"Independent":"Dependent"}/><Stat label="c₁v₁+c₂v₂" value={`[${f(tx)}, ${f(ty)}]`}/><Stat label={reached?"Target":"Distance to target"} value={reached?"Reached":f(dist)} good={reached}/></div>
+    </div>
+      <div className="u1-visual"><Plane>
+        {independent&&<rect x={sx(-4)} y={sy(4)} width={sx(4)-sx(-4)} height={sy(-4)-sy(4)} className="u1-span-fill"/>}
+        {!independent&&!zeroBoth&&<line x1={sx(-dirX*6)} y1={sy(-dirY*6)} x2={sx(dirX*6)} y2={sy(dirY*6)} className="u1-span-line"/>}
+        {lattice.map((p,i)=><circle key={i} cx={sx(p.x)} cy={sy(p.y)} r="2.4" className="u1-lattice-dot"/>)}
+        <polygon points={`${sx(0)},${sy(0)} ${sx(c1*ax)},${sy(c1*ay)} ${sx(tx)},${sy(ty)} ${sx(c2*bx)},${sy(c2*by)}`} className="u1-span-area"/>
+        <line x1={sx(0)} y1={sy(0)} x2={sx(ax)} y2={sy(ay)} className="u1-v1" markerEnd="url(#arrow-purple)"/>
+        <line x1={sx(0)} y1={sy(0)} x2={sx(bx)} y2={sy(by)} className="u1-v2" markerEnd="url(#arrow-coral)"/>
+        <line x1={sx(0)} y1={sy(0)} x2={sx(tx)} y2={sy(ty)} className="u1-vsum" markerEnd="url(#arrow-green)"/>
+        <circle cx={sx(gx)} cy={sy(gy)} r="7" className={`u1-target-marker ${reached?"reached":""}`}/>
+      </Plane><div className="u1-legend"><span className="v1">v₁</span><span className="v2">v₂</span><span className="sum">c₁v₁+c₂v₂</span><span className="target">target [{f(gx)}, {f(gy)}]</span></div></div></div>
+    <div className={`u1-observation ${reached?"":!independent?"warn":""}`}><Target/><p>{reached?<><b>Reached:</b> c₁={f(c1)} and c₂={f(c2)} land exactly on [{f(gx)}, {f(gy)}].</>:independent?<><b>Independent — every point is reachable:</b> the shaded plane and the sample dots show that some (c₁,c₂) pair can reach any target here. Try Auto-solve.</>:zeroBoth?<><b>Both vectors are zero:</b> the only reachable point is the origin.</>:<><b>Dependent — reach collapses to one line:</b> v₂ adds no new direction, so only points on the line shown can ever be reached, whatever c₁ and c₂ you pick — unless the target happens to sit exactly on that line.</>}</p></div>
   </LabShell>;
 }
 
@@ -484,10 +516,10 @@ function MLBridgeLab(){
 
 function ChapterLab({ id }: { id: string }){
   if(id==="vectors") return <SingleVectorLab/>;
-  if(id==="vector-addition") return <VectorLab mode="add"/>;
+  if(id==="vector-addition") return <VectorLab/>;
   if(id==="vector-subtraction") return <SubtractLab/>;
   if(id==="cross-product") return <CrossProductLab/>;
-  if(id==="span") return <VectorLab mode="span"/>;
+  if(id==="span") return <SpanLab/>;
   if(id==="dot") return <ProjectionLab/>;
   if(id==="basis") return <BasisLab/>;
   if(id==="transform") return <TransformLab/>;
