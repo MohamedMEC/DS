@@ -84,9 +84,9 @@ function DistributionShapeLab() {
   return <LabShell title="Countable bars vs a continuous curve" goal="Toggle between a discrete bar chart (exact point probabilities) and a continuous curve (probability only over an interval).">
     <div className="u1-presets"><button className={mode === "discrete" ? "active" : ""} onClick={() => setMode("discrete")}>Discrete: Binomial(10, 0.5)</button><button className={mode === "continuous" ? "active" : ""} onClick={() => setMode("continuous")}>Continuous: Standard normal</button></div>
     {mode === "discrete" ? <div className="u1-lab-grid"><div className="u1-controls"><div className="u1-stats"><Stat label={selectedK !== null ? `P(X = ${selectedK})` : "Click a bar"} value={selectedK !== null ? f(pmf[selectedK], 4) : "—"} good /></div></div>
-      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230"><line x1="30" y1="210" x2="400" y2="210" className="axis" />{k.map(ki => <g key={ki}><rect x={40 + ki * 34} y={210 - (pmf[ki] / maxPmf) * 180} width="26" height={(pmf[ki] / maxPmf) * 180} className="bar" opacity={selectedK === ki ? 1 : 0.45} onClick={() => setSelectedK(ki)} style={{ cursor: "pointer" }} /><text x={40 + ki * 34 + 13} y="222" textAnchor="middle" fontSize="9" fill="#7a8496">{ki}</text></g>)}</svg></div></div>
+      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230" role="img" aria-label="Bar chart of the Binomial(10, 0.5) probability mass function, click a bar to read its probability">{k.map(ki => <g key={ki}><rect x={40 + ki * 34} y={210 - (pmf[ki] / maxPmf) * 180} width="26" height={(pmf[ki] / maxPmf) * 180} className="bar" opacity={selectedK === ki ? 1 : 0.45} onClick={() => setSelectedK(ki)} style={{ cursor: "pointer" }} /><text x={40 + ki * 34 + 13} y="222" textAnchor="middle" fontSize="9" fill="#7a8496">{ki}</text></g>)}</svg></div></div>
       : <div className="u1-lab-grid"><div className="u1-controls"><MiniRange label="interval start" value={lo} min={-4} max={4} step={0.1} onChange={v => setLo(Math.min(v, hi))} /><MiniRange label="interval end" value={hi} min={-4} max={4} step={0.1} onChange={v => setHi(Math.max(v, lo))} /><div className="u1-stats"><Stat label={`P(${f(lo, 1)} < Z < ${f(hi, 1)})`} value={f(area, 4)} good /></div></div>
-        <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230"><line x1="30" y1="210" x2="400" y2="210" className="axis" /><polygon points={`${px(lo)},210 ` + xs.filter(x => x >= lo && x <= hi).map(x => `${px(x)},${py(normalPDF(x, 0, 1))}`).join(" ") + ` ${px(hi)},210`} fill="#6d4aff33" stroke="none" /><polyline points={xs.map(x => `${px(x)},${py(normalPDF(x, 0, 1))}`).join(" ")} fill="none" stroke="#6d4aff" strokeWidth="2.5" /></svg></div></div>}
+        <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230" role="img" aria-label={`Standard normal curve with the area between ${f(lo, 1)} and ${f(hi, 1)} shaded, probability ${f(area, 4)}`}><line x1="30" y1="210" x2="400" y2="210" className="axis" /><polygon points={`${px(lo)},210 ` + xs.filter(x => x >= lo && x <= hi).map(x => `${px(x)},${py(normalPDF(x, 0, 1))}`).join(" ") + ` ${px(hi)},210`} fill="#6d4aff33" stroke="none" /><polyline points={xs.map(x => `${px(x)},${py(normalPDF(x, 0, 1))}`).join(" ")} fill="none" stroke="#6d4aff" strokeWidth="2.5" /></svg></div></div>}
     <div className="u1-observation"><Eye /><p><b>Observe:</b> {mode === "discrete" ? "each bar is a real probability you can read directly; the bars for all k sum to exactly 1." : `the shaded area is the probability — narrow the interval toward zero width and the area (and probability) shrinks toward 0, even though the curve's height stays positive.`}</p></div>
   </LabShell>;
 }
@@ -103,7 +103,7 @@ function BinomialLab() {
       <MiniRange label="success probability p" value={p} min={0.01} max={0.99} step={0.01} onChange={v => { setP(v); setSelectedK(null); }} />
       <div className="u1-stats"><Stat label="E[X] = np" value={f(meanX)} /><Stat label="Var(X) = np(1−p)" value={f(varX)} />{selectedK !== null && <><Stat label={`P(X = ${selectedK})`} value={f(pmf[selectedK], 4)} good /><Stat label={`P(X ≤ ${selectedK})`} value={f(cdf!, 4)} /></>}</div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230"><line x1="30" y1="210" x2="400" y2="210" className="axis" />{k.map(ki => <rect key={ki} x={38 + ki * barW} y={210 - (pmf[ki] / maxPmf) * 180} width={barW - 3} height={(pmf[ki] / maxPmf) * 180} className="bar" opacity={selectedK === ki ? 1 : 0.5} onClick={() => setSelectedK(ki)} style={{ cursor: "pointer" }} />)}</svg></div></div>
+      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230" role="img" aria-label={`Bar chart of the Binomial(${n}, ${f(p, 2)}) probability mass function, click a bar to read its probability`}><line x1="30" y1="210" x2="400" y2="210" className="axis" />{k.map(ki => <rect key={ki} x={38 + ki * barW} y={210 - (pmf[ki] / maxPmf) * 180} width={barW - 3} height={(pmf[ki] / maxPmf) * 180} className="bar" opacity={selectedK === ki ? 1 : 0.5} onClick={() => setSelectedK(ki)} style={{ cursor: "pointer" }} />)}</svg></div></div>
     <div className="u1-observation"><Dices /><p><b>Shape:</b> the distribution peaks near E[X]={f(meanX, 1)}. {Math.abs(p - 0.5) < 0.15 ? "With p close to 0.5 it already looks close to symmetric." : n * Math.min(p, 1 - p) >= 8 ? `Even with p=${f(p, 2)} pulling it off-centre, n=${n} is large enough that the shape stays fairly symmetric.` : `With p=${f(p, 2)} far from 0.5 and only n=${n} trials, the shape is visibly skewed toward the near edge — it takes a larger n for skewed p values to look symmetric.`} For any fixed p, larger n does move the shape closer to symmetric — but how large "large" needs to be depends on how far p sits from 0.5.</p></div>
   </LabShell>;
 }
@@ -118,7 +118,7 @@ function PoissonLab() {
       <MiniRange label="rate λ (events per interval)" value={lambda} min={0.2} max={20} step={0.2} onChange={v => { setLambda(v); setSelectedK(null); }} />
       <div className="u1-stats"><Stat label="E[X] = λ" value={f(lambda)} /><Stat label="Var(X) = λ" value={f(lambda)} />{selectedK !== null && <Stat label={`P(X = ${selectedK})`} value={f(pmf[selectedK], 4)} good />}</div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230"><line x1="30" y1="210" x2="400" y2="210" className="axis" />{k.map(ki => <rect key={ki} x={38 + ki * barW} y={210 - (pmf[ki] / maxPmf) * 180} width={barW - 2} height={(pmf[ki] / maxPmf) * 180} className="bar" opacity={selectedK === ki ? 1 : 0.5} onClick={() => setSelectedK(ki)} style={{ cursor: "pointer" }} />)}</svg></div></div>
+      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230" role="img" aria-label={`Bar chart of the Poisson(${f(lambda)}) probability mass function, click a bar to read its probability`}><line x1="30" y1="210" x2="400" y2="210" className="axis" />{k.map(ki => <rect key={ki} x={38 + ki * barW} y={210 - (pmf[ki] / maxPmf) * 180} width={barW - 2} height={(pmf[ki] / maxPmf) * 180} className="bar" opacity={selectedK === ki ? 1 : 0.5} onClick={() => setSelectedK(ki)} style={{ cursor: "pointer" }} />)}</svg></div></div>
     <div className="u1-observation"><Hash /><p><b>Mean = variance:</b> both equal λ={f(lambda)} — a signature property that distinguishes Poisson from most other distributions.</p></div>
   </LabShell>;
 }
@@ -138,7 +138,7 @@ function NormalCurveLab() {
       <div className="u1-equation-stack"><span>z = (x−μ)/σ = ({f(x)}−{f(mu)})/{f(sigma)} = <b>{f(z)}</b></span></div>
       <div className="u1-stats"><Stat label="Within ±1σ" value={`${f(preset(1) * 100, 1)}%`} note="empirical rule ≈68%" /><Stat label="Within ±2σ" value={`${f(preset(2) * 100, 1)}%`} note="empirical rule ≈95%" /><Stat label="Within ±3σ" value={`${f(preset(3) * 100, 1)}%`} note="empirical rule ≈99.7%" /></div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230"><line x1="30" y1="210" x2="400" y2="210" className="axis" /><polyline points={xs.map(v => `${px(v)},${py(normalPDF(v, mu, sigma), maxD)}`).join(" ")} fill="none" stroke="#6d4aff" strokeWidth="2.5" /><line x1={px(x)} y1="20" x2={px(x)} y2="210" stroke="#ec5d67" strokeWidth="2" strokeDasharray="5" /><text x={px(x)} y="16" textAnchor="middle" fontSize="10" fill="#ec5d67">x={f(x)}</text></svg></div></div>
+      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230" role="img" aria-label={`Normal curve with mean ${f(mu)} and standard deviation ${f(sigma)}, with x=${f(x)} marked (z=${f(z)})`}><line x1="30" y1="210" x2="400" y2="210" className="axis" /><polyline points={xs.map(v => `${px(v)},${py(normalPDF(v, mu, sigma), maxD)}`).join(" ")} fill="none" stroke="#6d4aff" strokeWidth="2.5" /><line x1={px(x)} y1="20" x2={px(x)} y2="210" stroke="#ec5d67" strokeWidth="2" strokeDasharray="5" /><text x={px(x)} y="16" textAnchor="middle" fontSize="10" fill="#ec5d67">x={f(x)}</text></svg></div></div>
     <div className="u1-observation"><Activity /><p><b>Reading z:</b> {Math.abs(z) < 1 ? "this value sits within one standard deviation of the mean — unremarkable." : Math.abs(z) < 2 ? "this value is moderately far from the mean (between 1 and 2 SDs)." : "this value is quite unusual — more than 2 standard deviations from the mean."}</p></div>
   </LabShell>;
 }
@@ -152,29 +152,43 @@ function CLTLab() {
     setDraws(v => [...v, ...next].slice(-2000));
   };
   const reset = () => setDraws([]);
+  // Switching n starts a new sampling distribution — mixing sample means computed at different n in one histogram would be meaningless, so clear on every change.
+  const changeN = (v: number) => { setN(v); setDraws([]); };
   const meanOfMeans = draws.length ? draws.reduce((a, b) => a + b, 0) / draws.length : 0;
   const sdOfMeans = draws.length ? Math.sqrt(draws.reduce((a, b) => a + (b - meanOfMeans) ** 2, 0) / draws.length) : 0;
   const maxVal = 5, bins = 24, counts = new Array(bins).fill(0);
   draws.forEach(v => { const bi = Math.min(bins - 1, Math.max(0, Math.floor((v / maxVal) * bins))); counts[bi]++; });
   const maxCount = Math.max(1, ...counts);
   return <LabShell title="Watch averages become bell-shaped" goal="The source distribution (exponential — many small values, a few large ones) is heavily skewed. Draw sample means and watch their own distribution change shape.">
-    <div className="u1-presets"><button onClick={() => setN(1)} className={n === 1 ? "active" : ""}>n=1</button><button onClick={() => setN(2)} className={n === 2 ? "active" : ""}>n=2</button><button onClick={() => setN(5)} className={n === 5 ? "active" : ""}>n=5</button><button onClick={() => setN(30)} className={n === 30 ? "active" : ""}>n=30</button></div>
+    <div className="u1-presets"><button onClick={() => changeN(1)} className={n === 1 ? "active" : ""}>n=1</button><button onClick={() => changeN(2)} className={n === 2 ? "active" : ""}>n=2</button><button onClick={() => changeN(5)} className={n === 5 ? "active" : ""}>n=5</button><button onClick={() => changeN(30)} className={n === 30 ? "active" : ""}>n=30</button></div>
     <div className="u1-lab-grid"><div className="u1-controls">
       <button className="u1-preset" onClick={() => drawMeans(500)}><Play />Draw 500 sample means</button>
       <button className="u1-preset" onClick={reset}><RotateCcw />Reset</button>
       <div className="u1-stats"><Stat label="Sample means drawn" value={`${draws.length}`} /><Stat label="Mean of sample means" value={f(meanOfMeans)} note="true mean = 1.0" /><Stat label="SD of sample means" value={f(sdOfMeans)} note={`theory ≈ ${f(1 / Math.sqrt(n))}`} /></div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230"><line x1="30" y1="210" x2="400" y2="210" className="axis" />{counts.map((c, i) => <rect key={i} x={38 + i * 15} y={210 - (c / maxCount) * 180} width="12" height={(c / maxCount) * 180} className="bar" />)}</svg></div></div>
+      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230" role="img" aria-label={`Histogram of ${draws.length} sample means at n=${n}, showing the shape of the sampling distribution`}><line x1="30" y1="210" x2="400" y2="210" className="axis" />{counts.map((c, i) => <rect key={i} x={38 + i * 15} y={210 - (c / maxCount) * 180} width="12" height={(c / maxCount) * 180} className="bar" />)}</svg></div></div>
     <div className="u1-observation"><TrendingUp /><p><b>{n === 1 ? "At n=1:" : "At n=" + n + ":"}</b> {n === 1 ? "the sampling distribution just is the original skewed distribution — no averaging has happened yet." : "averaging " + n + " skewed values already looks noticeably more symmetric and narrower than the raw data."}</p></div>
   </LabShell>;
 }
 
 function LLNLab() {
-  const [p, setP] = useState(0.5), [history, setHistory] = useState<number[]>([]);
+  const [p, setP] = useState(0.5);
+  // totalFlips/totalHeads are the true cumulative counters. `history` is only a capped
+  // display buffer for the sparkline — it must never be used to reconstruct the counters,
+  // since slicing it to the last 3000 points would otherwise corrupt later probabilities.
+  const [totalFlips, setTotalFlips] = useState(0);
+  const [totalHeads, setTotalHeads] = useState(0);
+  const [history, setHistory] = useState<number[]>([]);
   const rng = useMemo(() => makeRng(3), []);
-  const flip = (count: number) => { setHistory(v => { const out = [...v]; let heads = out.length ? Math.round(out[out.length - 1] * out.length) : 0; for (let i = 0; i < count; i++) { const n = out.length + 1; if (rng() < p) heads++; out.push(heads / n); } return out.slice(-3000); }); };
-  const reset = () => setHistory([]);
-  const current = history.length ? history[history.length - 1] : 0;
+  const flip = (count: number) => {
+    let heads = totalHeads, flips = totalFlips;
+    const newPoints: number[] = [];
+    for (let i = 0; i < count; i++) { flips++; if (rng() < p) heads++; newPoints.push(heads / flips); }
+    setTotalHeads(heads); setTotalFlips(flips);
+    setHistory(v => [...v, ...newPoints].slice(-3000));
+  };
+  const reset = () => { setTotalFlips(0); setTotalHeads(0); setHistory([]); };
+  const current = totalFlips ? totalHeads / totalFlips : 0;
   const sampled = history.filter((_, i) => i % Math.max(1, Math.ceil(history.length / 200)) === 0);
   const px = (i: number) => 40 + (i / Math.max(1, sampled.length - 1)) * 350, py = (v: number) => 210 - v * 180;
   return <LabShell title="Watch a running average converge to the truth" goal="Flip a coin many times and track the running proportion of heads. Early runs are noisy; long runs settle near the true probability.">
@@ -183,10 +197,10 @@ function LLNLab() {
       <button className="u1-preset" onClick={() => flip(10)}><Play />Flip 10</button>
       <button className="u1-preset" onClick={() => flip(500)}><Play />Flip 500</button>
       <button className="u1-preset" onClick={reset}><RotateCcw />Reset</button>
-      <div className="u1-stats"><Stat label="Total flips" value={`${history.length}`} /><Stat label="Running proportion of heads" value={f(current, 4)} good={Math.abs(current - p) < 0.03} /><Stat label="True probability" value={f(p)} /></div>
+      <div className="u1-stats"><Stat label="Total flips" value={`${totalFlips}`} /><Stat label="Running proportion of heads" value={f(current, 4)} good={Math.abs(current - p) < 0.03} /><Stat label="True probability" value={f(p)} /></div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230"><line x1="30" y1={py(p)} x2="400" y2={py(p)} stroke="#0e9f6e" strokeWidth="1.5" strokeDasharray="4" /><line x1="30" y1="210" x2="400" y2="210" className="axis" /><polyline points={sampled.map((v, i) => `${px(i)},${py(v)}`).join(" ")} fill="none" stroke="#6d4aff" strokeWidth="2" /></svg></div></div>
-    <div className="u1-observation"><Repeat /><p><b>Convergence:</b> {history.length < 50 ? "with only a few flips, the running proportion can wander far from the true value by chance." : "with many flips, the green line (truth) and the purple running average are now close together."}</p></div>
+      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230" role="img" aria-label="Line chart of the running proportion of heads converging toward the true probability as flips accumulate"><line x1="30" y1={py(p)} x2="400" y2={py(p)} stroke="#0e9f6e" strokeWidth="1.5" strokeDasharray="4" /><line x1="30" y1="210" x2="400" y2="210" className="axis" /><polyline points={sampled.map((v, i) => `${px(i)},${py(v)}`).join(" ")} fill="none" stroke="#6d4aff" strokeWidth="2" /></svg></div></div>
+    <div className="u1-observation"><Repeat /><p><b>Convergence:</b> {totalFlips < 50 ? "with only a few flips, the running proportion can wander far from the true value by chance." : "with many flips, the green line (truth) and the purple running average are now close together."}</p></div>
   </LabShell>;
 }
 

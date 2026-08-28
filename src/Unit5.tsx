@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Eye, Grid3X3, LineChart, Play, RotateCcw, Scale, Split, Table2, Waves } from "lucide-react";
 import { Chapter, LabShell, MiniRange, NumberBox, Stat, StudioShell, f } from "./studio-kit";
-import { fOneway, linreg, mean, normalCDF, normalPDF, sigmoid, std, ttestInd } from "./stats-kit";
+import { fOneway, linreg, mean, normalCDF, normalInvCDF, normalPDF, sigmoid, std, ttestInd } from "./stats-kit";
 
 const chapters: Chapter[] = [
   {
@@ -59,7 +59,7 @@ const missions: Record<string, string[]> = {
   "multiple-regression": ["Auto-fit the model and read off both coefficients.", "Manually set b2 to 0 and see how R² changes.", "Find weights that make the model fit worse than the auto-fit solution."],
   "logistic-regression": ["Auto-fit the sigmoid and note the resulting accuracy.", "Raise the threshold to 0.8 and watch precision and recall trade off.", "Lower the threshold to 0.2 and see recall rise as precision falls."],
   "hypothesis-testing": ["Set the observed proportion equal to p0 and confirm you fail to reject.", "Push the observed proportion far from p0 until p < 0.05.", "Increase n and watch the same gap become statistically significant."],
-  "t-test": ["Make the two groups' means far apart with low within-group spread — get a tiny p-value.", "Make the means close together — confirm you fail to reject.", "Add more values to each group and see the p-value shrink even with the same gap."],
+  "t-test": ["Make the two groups' means far apart with low within-group spread — get a tiny p-value.", "Make the means close together — confirm you fail to reject.", "Without moving either group's mean, tighten each group's 5 values (make them closer to each other) and watch the p-value shrink even though the gap between means didn't change."],
   anova: ["Make three groups with very different means and check the F-statistic.", "Make three groups with nearly identical means and confirm a high p-value.", "Add within-group spread and watch F shrink even though the means didn't move."],
 };
 
@@ -85,7 +85,7 @@ function RegressionLab() {
       <div className="u1-big-equation">ŷ = {f(m)}x {b >= 0 ? "+" : "−"} {f(Math.abs(b))}</div>
       <div className="u1-stats"><Stat label="R²" value={f(r2, 3)} good={r2 > 0.6} note={r2 > 0.8 ? "strong fit" : r2 > 0.4 ? "moderate fit" : "weak fit"} /></div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 420 240" width="100%" height="240"><line x1="30" y1="220" x2="400" y2="220" className="axis" /><line x1={px(0)} y1={py(b)} x2={px(6)} y2={py(m * 6 + b)} className="u1-fit-line" />{points.map((p, i) => <g key={i}><line x1={px(p.x)} y1={py(p.y)} x2={px(p.x)} y2={py(m * p.x + b)} className="u1-residual-line" /><circle cx={px(p.x)} cy={py(p.y)} r="6" className="u1-data-point" /></g>)}</svg></div></div>
+      <div className="u1-visual"><svg viewBox="0 0 420 240" width="100%" height="240" role="img" aria-label={`Scatter plot of the data points with the fitted regression line, R squared ${f(r2, 2)}`}><line x1="30" y1="220" x2="400" y2="220" className="axis" /><line x1={px(0)} y1={py(b)} x2={px(6)} y2={py(m * 6 + b)} className="u1-fit-line" />{points.map((p, i) => <g key={i}><line x1={px(p.x)} y1={py(p.y)} x2={px(p.x)} y2={py(m * p.x + b)} className="u1-residual-line" /><circle cx={px(p.x)} cy={py(p.y)} r="6" className="u1-data-point" /></g>)}</svg></div></div>
     <div className="u1-observation"><LineChart /><p><b>{r2 > 0.8 ? "Strong fit:" : r2 > 0.4 ? "Moderate fit:" : "Weak fit:"}</b> R²={f(r2, 3)} means the line explains {f(r2 * 100, 1)}% of the variance in y; the rest is scatter the line can't capture.</p></div>
   </LabShell>;
 }
@@ -148,7 +148,7 @@ function LogisticLab() {
       <div className="u1-stats"><Stat label="Accuracy" value={`${f(accuracy * 100, 1)}%`} /><Stat label="Precision" value={`${f(precision * 100, 1)}%`} /><Stat label="Recall" value={`${f(recall * 100, 1)}%`} good={recall > 0.7} /></div>
       <div className="u1-stats"><Stat label="TP" value={`${tp}`} /><Stat label="FP" value={`${fp}`} /><Stat label="TN" value={`${tn}`} /><Stat label="FN" value={`${fn}`} /></div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230"><line x1="30" y1="210" x2="400" y2="210" className="axis" /><line x1="30" y1={py(threshold)} x2="400" y2={py(threshold)} stroke="#ec5d67" strokeWidth="1.5" strokeDasharray="4" /><polyline points={Array.from({ length: 60 }, (_, i) => { const h = i / 6; return `${px(h)},${py(sigmoid(w * h + b))}`; }).join(" ")} fill="none" stroke="#6d4aff" strokeWidth="2.5" />{cohort.map((c, i) => <circle key={i} cx={px(c.h)} cy={py(c.passed)} r="6" fill={c.passed ? "#0e9f6e" : "#ec5d67"} stroke="#fff" strokeWidth="1.5" />)}</svg></div></div>
+      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230" role="img" aria-label={`Sigmoid curve with decision threshold at ${f(threshold, 2)} and each student plotted by hours studied and pass or fail outcome`}><line x1="30" y1="210" x2="400" y2="210" className="axis" /><line x1="30" y1={py(threshold)} x2="400" y2={py(threshold)} stroke="#ec5d67" strokeWidth="1.5" strokeDasharray="4" /><polyline points={Array.from({ length: 60 }, (_, i) => { const h = i / 6; return `${px(h)},${py(sigmoid(w * h + b))}`; }).join(" ")} fill="none" stroke="#6d4aff" strokeWidth="2.5" />{cohort.map((c, i) => <circle key={i} cx={px(c.h)} cy={py(c.passed)} r="6" fill={c.passed ? "#0e9f6e" : "#ec5d67"} stroke="#fff" strokeWidth="1.5" />)}</svg></div></div>
     <div className="u1-observation"><Waves /><p><b>Threshold trade-off:</b> raising the threshold makes the model more cautious about predicting 'pass', which tends to raise precision but lower recall — the right balance depends on which mistake costs more.</p></div>
   </LabShell>;
 }
@@ -160,17 +160,19 @@ function HypothesisTestLab() {
   const reject = pValue < alpha;
   const px = (v: number) => 210 + v * 42, py = (d: number, maxD: number) => 210 - (d / maxD) * 180;
   const xs = Array.from({ length: 161 }, (_, i) => -4 + i * 0.05), maxD = normalPDF(0, 0, 1);
-  const zCrit = 1.959963985; // two-tailed critical value at alpha=0.05, shown as a reference line
+  // Critical z depends on alpha — Φ⁻¹(1-α/2) is only ≈1.96 when α=0.05; recompute so the
+  // dashed lines actually track the α slider instead of staying pinned at the 0.05 case.
+  const zCrit = normalInvCDF(1 - alpha / 2);
   return <LabShell title="Decide whether an observed gap is real" goal="Change the observed data and α, then watch the p-value and reject/fail-to-reject decision update.">
     <div className="u1-lab-grid"><div className="u1-controls">
       <NumberBox label="observed successes" value={successes} onChange={v => setSuccesses(Math.max(0, Math.min(n, Math.round(v))))} step="1" />
       <NumberBox label="sample size n" value={n} onChange={v => setN(Math.max(1, Math.round(v)))} step="1" />
       <MiniRange label="hypothesised p0" value={p0} min={0.05} max={0.95} step={0.01} onChange={setP0} />
       <MiniRange label="significance α" value={alpha} min={0.01} max={0.2} step={0.01} onChange={setAlpha} />
-      <div className="u1-equation-stack"><span>p̂ = {successes}/{n} = {f(pHat, 3)}</span><span>z = ({f(pHat, 3)}−{f(p0, 2)})/{f(se, 4)} = <b>{f(z, 3)}</b></span><span>two-tailed p-value = <b>{f(pValue, 4)}</b></span></div>
+      <div className="u1-equation-stack"><span>p̂ = {successes}/{n} = {f(pHat, 3)}</span><span>z = ({f(pHat, 3)}−{f(p0, 2)})/{f(se, 4)} = <b>{f(z, 3)}</b></span><span>two-tailed p-value = <b>{f(pValue, 4)}</b></span><span>z_critical = Φ⁻¹(1−α/2) = ±{f(zCrit, 3)}</span></div>
       <div className={`u1-observation ${reject ? "" : "warn"}`}><Scale /><p><b>{reject ? "Reject H0:" : "Fail to reject H0:"}</b> p={f(pValue, 4)} is {reject ? "below" : "not below"} α={f(alpha, 2)}.</p></div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230"><line x1="30" y1="210" x2="400" y2="210" className="axis" /><polyline points={xs.map(x => `${px(x)},${py(normalPDF(x, 0, 1), maxD)}`).join(" ")} fill="none" stroke="#6d4aff" strokeWidth="2" /><line x1={px(-zCrit)} y1="20" x2={px(-zCrit)} y2="210" stroke="#ffb020" strokeDasharray="4" /><line x1={px(zCrit)} y1="20" x2={px(zCrit)} y2="210" stroke="#ffb020" strokeDasharray="4" /><line x1={px(z)} y1="20" x2={px(z)} y2="210" stroke="#ec5d67" strokeWidth="2" /><text x={px(z)} y="16" textAnchor="middle" fontSize="10" fill="#ec5d67">z={f(z, 2)}</text></svg></div></div>
+      <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230" role="img" aria-label={`Standard normal curve with dashed critical lines at plus and minus ${f(zCrit, 2)} for alpha ${f(alpha, 2)}, and the observed z-statistic marked at ${f(z, 2)}`}><line x1="30" y1="210" x2="400" y2="210" className="axis" /><polyline points={xs.map(x => `${px(x)},${py(normalPDF(x, 0, 1), maxD)}`).join(" ")} fill="none" stroke="#6d4aff" strokeWidth="2" /><line x1={px(-zCrit)} y1="20" x2={px(-zCrit)} y2="210" stroke="#ffb020" strokeDasharray="4" /><line x1={px(zCrit)} y1="20" x2={px(zCrit)} y2="210" stroke="#ffb020" strokeDasharray="4" /><line x1={px(z)} y1="20" x2={px(z)} y2="210" stroke="#ec5d67" strokeWidth="2" /><text x={px(z)} y="16" textAnchor="middle" fontSize="10" fill="#ec5d67">z={f(z, 2)}</text></svg></div></div>
   </LabShell>;
 }
 
@@ -187,9 +189,9 @@ function TTestLab() {
       <div className="u1-control-pair">{a.map((v, i) => <NumberBox key={`a${i}`} label={`A${i + 1}`} value={v} onChange={n => setAv(i, n)} step="1" />)}</div>
       <div className="u1-control-pair">{b.map((v, i) => <NumberBox key={`b${i}`} label={`B${i + 1}`} value={v} onChange={n => setBv(i, n)} step="1" />)}</div>
       <div className="u1-equation-stack"><span>x̄A={f(ma)}  SDA={f(sa)}</span><span>x̄B={f(mb)}  SDB={f(sb)}</span><span>t={f(t, 3)}, df={df}</span><span>p-value = <b>{f(p, 4)}</b></span></div>
-      <div className={`u1-observation ${reject ? "" : "warn"}`}><Split /><p><b>{reject ? "Reject H0:" : "Fail to reject H0:"}</b> the difference is {reject ? "unlikely to be chance alone (p<0.05)." : "small enough that chance alone can't be ruled out (p≥0.05)."}</p></div>
+      <div className={`u1-observation ${reject ? "" : "warn"}`}><Split /><p><b>{reject ? "Reject H0:" : "Fail to reject H0:"}</b> the difference is {reject ? "unlikely to be chance alone (p<0.05)." : "small enough that chance alone can't be ruled out (p≥0.05)."} This is a <b>pooled (equal-variance) t-test</b> — it assumes both groups share the same underlying variance. A <b>Welch's t-test</b>, which doesn't require that assumption, would be a good addition for groups with very different spreads.</p></div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 260 220" width="100%" height="220">{a.map((v, i) => <circle key={`a${i}`} cx={60 + (i % 3) * 20} cy={py(v)} r="6" fill="#6d4aff" />)}{b.map((v, i) => <circle key={`b${i}`} cx={170 + (i % 3) * 20} cy={py(v)} r="6" fill="#ec5d67" />)}<line x1="30" y1={py(ma)} x2="120" y2={py(ma)} stroke="#4b2dcc" strokeWidth="2" /><line x1="145" y1={py(mb)} x2="235" y2={py(mb)} stroke="#ae3340" strokeWidth="2" /></svg>
+      <div className="u1-visual"><svg viewBox="0 0 260 220" width="100%" height="220" role="img" aria-label={`Dot plot of Group A and Group B values with their means marked; t=${f(t, 2)}, p=${f(p, 3)}`}>{a.map((v, i) => <circle key={`a${i}`} cx={60 + (i % 3) * 20} cy={py(v)} r="6" fill="#6d4aff" />)}{b.map((v, i) => <circle key={`b${i}`} cx={170 + (i % 3) * 20} cy={py(v)} r="6" fill="#ec5d67" />)}<line x1="30" y1={py(ma)} x2="120" y2={py(ma)} stroke="#4b2dcc" strokeWidth="2" /><line x1="145" y1={py(mb)} x2="235" y2={py(mb)} stroke="#ae3340" strokeWidth="2" /></svg>
         <div className="u1-legend"><span className="v1">Group A</span><span className="v2">Group B</span></div></div></div>
   </LabShell>;
 }
@@ -208,7 +210,7 @@ function AnovaLab() {
       <div className="u1-equation-stack"><span>means: {means.map(m => f(m, 1)).join(", ")}</span><span>F = {f(fStat, 3)}, df=({dfBetween},{dfWithin})</span><span>p-value = <b>{f(p, 4)}</b></span></div>
       <div className={`u1-observation ${reject ? "" : "warn"}`}><Table2 /><p><b>{reject ? "Reject H0:" : "Fail to reject H0:"}</b> {reject ? "at least one group mean likely differs from the others." : "the group means could plausibly be equal — no strong evidence of a difference."}</p></div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 300 220" width="100%" height="220">{groups.map((g, gi) => <g key={gi}><rect x={30 + gi * 90} y={py(means[gi])} width="60" height={200 - py(means[gi])} fill={colors[gi]} opacity="0.75" /><line x1={60 + gi * 90} y1={py(means[gi] - sds[gi])} x2={60 + gi * 90} y2={py(means[gi] + sds[gi])} stroke="#172033" strokeWidth="2" /><text x={60 + gi * 90} y="214" textAnchor="middle" fontSize="10" fill="#7a8496">Group {gi + 1}</text></g>)}</svg></div></div>
+      <div className="u1-visual"><svg viewBox="0 0 300 220" width="100%" height="220" role="img" aria-label={`Bar chart of each group's mean with error bars for one standard deviation; F=${f(fStat, 2)}, p=${f(p, 3)}`}>{groups.map((g, gi) => <g key={gi}><rect x={30 + gi * 90} y={py(means[gi])} width="60" height={200 - py(means[gi])} fill={colors[gi]} opacity="0.75" /><line x1={60 + gi * 90} y1={py(means[gi] - sds[gi])} x2={60 + gi * 90} y2={py(means[gi] + sds[gi])} stroke="#172033" strokeWidth="2" /><text x={60 + gi * 90} y="214" textAnchor="middle" fontSize="10" fill="#7a8496">Group {gi + 1}</text></g>)}</svg></div></div>
   </LabShell>;
 }
 

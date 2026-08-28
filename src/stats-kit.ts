@@ -55,6 +55,17 @@ function erf(x: number) {
 }
 export function normalCDF(x: number, mu = 0, sigma = 1) { return 0.5 * (1 + erf((x - mu) / (sigma * Math.SQRT2))); }
 
+/** Inverse standard normal CDF (quantile function), e.g. for a critical z-value at a
+ * given alpha. Found by bisection against normalCDF rather than a second approximation,
+ * so it stays consistent with normalCDF above and needs no extra polynomial coefficients. */
+export function normalInvCDF(p: number, mu = 0, sigma = 1) {
+  if (p <= 0) return -Infinity;
+  if (p >= 1) return Infinity;
+  let lo = -10, hi = 10;
+  for (let i = 0; i < 60; i++) { const mid = (lo + hi) / 2; if (normalCDF(mid) < p) lo = mid; else hi = mid; }
+  return mu + sigma * ((lo + hi) / 2);
+}
+
 export function sigmoid(z: number) { return 1 / (1 + Math.exp(-z)); }
 
 // ---- regularized incomplete beta function I_x(a, b) via continued fraction

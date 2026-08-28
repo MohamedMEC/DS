@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ArrowRight, Dices, Eye, GitBranch, GitMerge, Percent, PieChart, Play, RotateCcw, Shuffle, Sigma, Stethoscope, TrendingUp } from "lucide-react";
-import { Chapter, LabShell, MiniRange, NumberBox, Stat, StudioShell, f } from "./studio-kit";
+import { ArrowRight, Dices, Eye, GitBranch, GitMerge, Percent, PieChart, Play, RotateCcw, Shuffle, Sigma, Stethoscope, TrendingUp, TriangleAlert } from "lucide-react";
+import { Chapter, LabShell, MiniRange, NumberBox, Stat, StudioShell, clamp, f } from "./studio-kit";
 
 const chapters: Chapter[] = [
   {
@@ -109,7 +109,7 @@ function DiceGridLab({ mode }: { mode: "single" | "rules" }) {
         {mode === "single" && <Stat label="P(Aᶜ) = complement" value={f(1 - pA, 3)} note={`${36 - countA}/36`} />}
       </div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 420 320" width="100%" height="320">
+      <div className="u1-visual"><svg viewBox="0 0 420 320" width="100%" height="320" role="img" aria-label={`6 by 6 grid of dice outcomes with event A (sum equals ${target}) highlighted${mode === "rules" && useB ? ", event B (at least one 6) highlighted, and their overlap marked" : ""}`}>
         <text x={ox + 3 * cell} y="16" textAnchor="middle" fontSize="10" fill="#7a8496">die 2 →</text>
         <text x="14" y={oy + 3 * cell} textAnchor="middle" fontSize="10" fill="#7a8496" transform={`rotate(-90 14 ${oy + 3 * cell})`}>die 1 →</text>
         {[1, 2, 3, 4, 5, 6].map(j => <text key={`c${j}`} x={ox + (j - 0.5) * cell} y={oy - 6} textAnchor="middle" fontSize="10" fill="#98a0ae">{j}</text>)}
@@ -137,7 +137,7 @@ function ConditionalLab({ independenceFocus = false }: { independenceFocus?: boo
       <div className="u1-stats"><Stat label="P(A)" value={f(pA, 3)} /><Stat label="P(B)" value={f(pB, 3)} /><Stat label="P(A∩B)" value={f(pAB, 3)} /><Stat label="P(A|B)" value={f(pAgivenB, 3)} good={!independenceFocus} /><Stat label="P(B|A)" value={f(pBgivenA, 3)} />{independenceFocus && <Stat label="P(A)×P(B)" value={f(expected, 3)} />}</div>
       {independenceFocus && <div className={`u1-observation ${independent ? "" : "warn"}`}><Shuffle /><p><b>{independent ? "Independent:" : "Dependent:"}</b> P(A∩B)={f(pAB, 3)} {independent ? "matches" : "differs from"} P(A)×P(B)={f(expected, 3)} (gap {f(gap, 3)}).</p></div>}
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 260 260" width="100%" height="260">{cats.map((cat, i) => { const col = i % 10, row = Math.floor(i / 10), color = cat === "a" ? "#6d4aff" : cat === "b" ? "#ec5d67" : cat === "c" ? "#ffb020" : "#e1e4eb"; return <rect key={i} x={6 + col * 25} y={6 + row * 25} width="21" height="21" rx="4" fill={color} />; })}</svg>
+      <div className="u1-visual"><svg viewBox="0 0 260 260" width="100%" height="260" role="img" aria-label="100-square grid where each square's color shows which region of the contingency table it belongs to, proportional to the counts">{cats.map((cat, i) => { const col = i % 10, row = Math.floor(i / 10), color = cat === "a" ? "#6d4aff" : cat === "b" ? "#ec5d67" : cat === "c" ? "#ffb020" : "#e1e4eb"; return <rect key={i} x={6 + col * 25} y={6 + row * 25} width="21" height="21" rx="4" fill={color} />; })}</svg>
         <div className="u1-legend"><span className="v1">A∩B</span><span className="v2">A∩¬B</span><span className="eig">¬A∩B</span></div>
       </div></div>
   </LabShell>;
@@ -181,7 +181,7 @@ function ExpectationLab() {
       <div className="u1-control-pair">{payouts.map((v, i) => <NumberBox key={i} label={`payout for face ${i + 1}`} value={v} onChange={n => setPayout(i, n)} step="1" />)}</div>
       <div className="u1-stats"><Stat label="E[X]" value={f(mean)} good /><Stat label="Var(X)" value={f(variance)} /><Stat label="SD(X)" value={f(sd)} /></div>
     </div>
-      <div className="u1-visual" style={{ padding: "10px" }}><svg viewBox="0 0 380 180" width="100%" height="180">
+      <div className="u1-visual" style={{ padding: "10px" }}><svg viewBox="0 0 380 180" width="100%" height="180" role="img" aria-label={`Bar chart of each face's payout with the expected value E[X]=${f(mean)} marked as a dashed line`}>
         <line x1="20" y1="150" x2="360" y2="150" className="axis" />
         {payouts.map((v, i) => <g key={i}><rect x={30 + i * 55} y={150 - barH(v)} width="34" height={barH(v)} className="bar" /><text x={30 + i * 55 + 17} y="164" textAnchor="middle" fontSize="10" fill="#7a8496">face {i + 1}</text><text x={30 + i * 55 + 17} y={150 - barH(v) - 6} textAnchor="middle" fontSize="10" fill="#4b2dcc">{v}</text></g>)}
         <line x1="20" y1={150 - (mean / maxAbs) * 130} x2="360" y2={150 - (mean / maxAbs) * 130} stroke="#ec5d67" strokeWidth="2" strokeDasharray="6" />
@@ -192,27 +192,34 @@ function ExpectationLab() {
 }
 
 function MultiplicationRuleLab() {
-  const [total, setTotal] = useState(52), [matching, setMatching] = useState(4), [draws, setDraws] = useState(2);
+  const [total, setTotalRaw] = useState(52), [matching, setMatchingRaw] = useState(4), [draws, setDraws] = useState(2);
+  // Keep the model well-formed: total >= 1, 0 <= matching <= total, so a draw's probability is never negative or above 1.
+  const setTotal = (v: number) => { const t = Math.max(1, Math.round(v)); setTotalRaw(t); setMatchingRaw(m => clamp(Math.round(m), 0, t)); };
+  const setMatching = (v: number) => setMatchingRaw(clamp(Math.round(v), 0, total));
+  const maxDraws = Math.max(0, Math.min(matching, total));
+  const effectiveDraws = Math.min(draws, maxDraws);
+  const limited = effectiveDraws < draws;
   const steps: { label: string; p: number }[] = [];
   let remainingTotal = total, remainingMatch = matching, product = 1;
-  for (let i = 0; i < draws; i++) {
+  for (let i = 0; i < effectiveDraws; i++) {
     const p = remainingTotal > 0 ? remainingMatch / remainingTotal : 0;
     steps.push({ label: i === 0 ? `P(draw ${i + 1} matches)` : `P(draw ${i + 1} matches | previous ${i} matched)`, p });
     product *= p;
     remainingTotal -= 1; remainingMatch -= 1;
   }
-  const independentProduct = Math.pow(total ? matching / total : 0, draws);
+  const independentProduct = Math.pow(total ? matching / total : 0, effectiveDraws);
   return <LabShell title="Chain conditional steps with the multiplication rule" goal="Draw items without replacement and watch each step's probability shrink the pool for the next draw.">
     <div className="u1-lab-grid"><div className="u1-controls">
       <div className="u1-control-pair"><NumberBox label="total items" value={total} onChange={setTotal} step="1" /><NumberBox label="matching items" value={matching} onChange={setMatching} step="1" /></div>
-      <div className="u1-presets"><button className={draws === 2 ? "active" : ""} onClick={() => setDraws(2)}>2 draws</button><button className={draws === 3 ? "active" : ""} onClick={() => setDraws(3)}>3 draws</button></div>
+      <div className="u1-presets"><button className={draws === 2 ? "active" : ""} onClick={() => setDraws(2)} disabled={maxDraws < 2}>2 draws</button><button className={draws === 3 ? "active" : ""} onClick={() => setDraws(3)} disabled={maxDraws < 3}>3 draws</button></div>
+      {limited && <div className="u1-observation warn"><TriangleAlert /><p>Only {matching} matching item{matching === 1 ? "" : "s"} of {total} available, so at most {maxDraws} draw{maxDraws === 1 ? "" : "s"} without replacement can be shown — using {effectiveDraws}.</p></div>}
       <div className="u1-equation-stack">
-        {steps.map((s, i) => <span key={i}>{s.label} = {f(s.p, 4)}</span>)}
-        <span>Product = {steps.map(s => f(s.p, 3)).join(" × ")} = <b>{f(product, 4)}</b></span>
+        {steps.length ? steps.map((s, i) => <span key={i}>{s.label} = {f(s.p, 4)}</span>) : <span>Set at least 1 matching item to see a draw.</span>}
+        {steps.length > 0 && <span>Product = {steps.map(s => f(s.p, 3)).join(" × ")} = <b>{f(product, 4)}</b></span>}
       </div>
       <div className="u1-stats"><Stat label="P(all match), without replacement" value={f(product, 4)} good /><Stat label="If independent (with replacement)" value={f(independentProduct, 4)} /></div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 380 160" width="100%" height="160">
+      <div className="u1-visual"><svg viewBox="0 0 380 160" width="100%" height="160" role="img" aria-label="Chain of draw probabilities multiplied left to right">
         {steps.map((s, i) => <g key={i}>
           <rect x={20 + i * 125} y="40" width="100" height="60" rx="10" fill={i === 0 ? "#6d4aff" : "#ec5d67"} opacity={0.85} />
           <text x={70 + i * 125} y="65" textAnchor="middle" fontSize="11" fill="#fff">draw {i + 1}</text>
@@ -225,28 +232,32 @@ function MultiplicationRuleLab() {
 }
 
 function TotalProbabilityLab() {
-  const [shares, setShares] = useState([0.5, 0.3, 0.2]);
-  const [rates, setRates] = useState([0.02, 0.03, 0.05]);
-  const setShare = (i: number, v: number) => setShares(s => s.map((x, j) => j === i ? v : x));
-  const setRate = (i: number, v: number) => setRates(s => s.map((x, j) => j === i ? v : x));
+  const [shares, setSharesRaw] = useState([0.5, 0.3, 0.2]);
+  const [rates, setRatesRaw] = useState([0.02, 0.03, 0.05]);
+  // Shares and rates are each probabilities, so keep every entry inside [0,1].
+  const setShare = (i: number, v: number) => setSharesRaw(s => s.map((x, j) => j === i ? clamp(v, 0, 1) : x));
+  const setRate = (i: number, v: number) => setRatesRaw(s => s.map((x, j) => j === i ? clamp(v, 0, 1) : x));
   const shareSum = shares.reduce((a, b) => a + b, 0);
+  const validPartition = Math.abs(shareSum - 1) < 0.005;
+  const normalize = () => { if (shareSum > 0) setSharesRaw(s => s.map(x => Math.round((x / shareSum) * 1000) / 1000)); };
   const contributions = shares.map((share, i) => share * rates[i]);
   const overall = contributions.reduce((a, b) => a + b, 0);
-  const maxContribution = Math.max(0.001, ...contributions);
+  const maxContribution = Math.max(0.001, ...contributions, overall) * 1.08;
   const labels = ["Machine A", "Machine B", "Machine C"];
   return <LabShell title="Average over every pathway with the law of total probability" goal="Edit each pathway's share of production and its own defect rate, and watch the overall defect rate blend all three.">
     <div className="u1-lab-grid"><div className="u1-controls">
       {labels.map((lab, i) => <div key={i} className="u1-control-pair"><NumberBox label={`${lab} share`} value={shares[i]} onChange={v => setShare(i, v)} step="0.01" /><NumberBox label={`${lab} defect rate`} value={rates[i]} onChange={v => setRate(i, v)} step="0.001" /></div>)}
-      <div className={`u1-observation ${Math.abs(shareSum - 1) > 0.01 ? "warn" : ""}`}><PieChart /><p>Shares sum to <b>{f(shareSum, 2)}</b>{Math.abs(shareSum - 1) > 0.01 ? " — a partition must sum to exactly 1." : " — a valid partition."}</p></div>
-      <div className="u1-stats">{labels.map((lab, i) => <Stat key={i} label={`${lab}: share × rate`} value={f(contributions[i], 4)} />)}<Stat label="Overall P(defect)" value={f(overall, 4)} good /></div>
+      <div className={`u1-observation ${validPartition ? "" : "warn"}`}><PieChart /><p>Shares sum to <b>{f(shareSum, 2)}</b>{validPartition ? " — a valid partition." : " — a partition must sum to exactly 1."}</p></div>
+      {!validPartition && <button className="u1-preset" onClick={normalize}>Normalise shares to sum to 1</button>}
+      <div className="u1-stats">{labels.map((lab, i) => <Stat key={i} label={`${lab}: share × rate`} value={f(contributions[i], 4)} />)}<Stat label={validPartition ? "Overall P(defect)" : "Overall P(defect) — invalid partition"} value={f(overall, 4)} good={validPartition} /></div>
     </div>
-      <div className="u1-visual"><svg viewBox="0 0 380 180" width="100%" height="180">
+      <div className="u1-visual"><svg viewBox="0 0 380 180" width="100%" height="180" role="img" aria-label="Bar chart of each pathway's contribution to the defect rate, with the overall total marked">
         <line x1="20" y1="150" x2="360" y2="150" className="axis" />
         {contributions.map((v, i) => <g key={i}><rect x={40 + i * 110} y={150 - (v / maxContribution) * 120} width="70" height={(v / maxContribution) * 120} className="bar" /><text x={75 + i * 110} y="164" textAnchor="middle" fontSize="10" fill="#7a8496">{labels[i]}</text><text x={75 + i * 110} y={150 - (v / maxContribution) * 120 - 6} textAnchor="middle" fontSize="10" fill="#4b2dcc">{f(v, 3)}</text></g>)}
         <line x1="20" y1={150 - (overall / maxContribution) * 120} x2="360" y2={150 - (overall / maxContribution) * 120} stroke="#ec5d67" strokeWidth="2" strokeDasharray="6" />
         <text x="365" y={150 - (overall / maxContribution) * 120 + 4} fontSize="10" fill="#ec5d67">total</text>
       </svg></div></div>
-    <div className="u1-observation"><Sigma /><p><b>Weighted blend:</b> the overall probability isn't a plain average of the three rates — it's weighted by how much each pathway contributes to the whole, exactly like Bayes' theorem's denominator P(E).</p></div>
+    <div className="u1-observation"><Sigma /><p><b>Weighted blend:</b> {validPartition ? "the overall probability isn't a plain average of the three rates — it's weighted by how much each pathway contributes to the whole, exactly like Bayes' theorem's denominator P(E)." : "this number is only meaningful once the shares form a true partition (sum to exactly 1) — right now some outcomes are double-counted or left out entirely."}</p></div>
   </LabShell>;
 }
 

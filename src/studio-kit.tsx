@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   BookOpen,
@@ -100,9 +100,22 @@ export function PythonPanel({ chapter, pythonByChapter }: { chapter: Chapter; py
 export function ConceptCard({ chapter }: { chapter: Chapter }) {
   const [step, setStep] = useState(0), [choice, setChoice] = useState<number | null>(null);
   const correct = choice === chapter.check.answer;
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   useEffect(() => { setStep(0); setChoice(null); }, [chapter.id]);
   const steps = [{ label: "Meaning first", icon: Lightbulb, text: chapter.meaning }, { label: "Tiny numerical example", icon: FunctionSquare, text: chapter.example }, { label: "Formula connected", icon: Sigma, text: chapter.formula }, { label: "Why AI/ML uses it", icon: BrainCircuit, text: chapter.ml }];
-  return <section className="u1-concept"><div className="u1-concept-head"><span>{chapter.number}</span><div><p>GUIDED CONCEPT</p><h2>{chapter.title}</h2></div></div><div className="u1-step-tabs" role="tablist" aria-label="Concept steps">{steps.map((s, i) => { const I = s.icon; return <button key={s.label} role="tab" aria-selected={step === i} className={step === i ? "active" : ""} onClick={() => setStep(i)}><I aria-hidden="true" /><span>{i + 1}. {s.label}</span></button>; })}</div><div className="u1-step-body"><span>0{step + 1}</span><div><h3>{steps[step].label}</h3><p>{steps[step].text}</p></div></div><div className="u1-check"><div><CircleHelp /><span><b>Quick check</b>{chapter.check.q}</span></div><div className="u1-check-options">{chapter.check.options.map((o, i) => <button className={choice === null ? "" : i === chapter.check.answer ? "correct" : choice === i ? "wrong" : ""} key={o} onClick={() => setChoice(i)}>{choice !== null && i === chapter.check.answer ? <Check /> : <i>{String.fromCharCode(65 + i)}</i>}{o}</button>)}</div>{choice !== null && <p className={correct ? "correct" : "wrong"}>{correct ? "Correct. " : "Not quite. "}{chapter.check.why}</p>}</div></section>;
+  // Roving-tabindex keyboard navigation for the step tablist: only the active tab is in
+  // the tab order, and Left/Right/Home/End move both the selection and focus together.
+  const onStepKeyDown = (e: React.KeyboardEvent, i: number) => {
+    let next = i;
+    if (e.key === "ArrowRight") next = (i + 1) % steps.length;
+    else if (e.key === "ArrowLeft") next = (i - 1 + steps.length) % steps.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = steps.length - 1;
+    else return;
+    e.preventDefault(); setStep(next); tabRefs.current[next]?.focus();
+  };
+  const tabId = (i: number) => `concept-tab-${chapter.id}-${i}`, panelId = `concept-panel-${chapter.id}`;
+  return <section className="u1-concept"><div className="u1-concept-head"><span>{chapter.number}</span><div><p>GUIDED CONCEPT</p><h2>{chapter.title}</h2></div></div><div className="u1-step-tabs" role="tablist" aria-label="Concept steps">{steps.map((s, i) => { const I = s.icon; return <button key={s.label} ref={el => { tabRefs.current[i] = el; }} id={tabId(i)} role="tab" aria-selected={step === i} aria-controls={panelId} tabIndex={step === i ? 0 : -1} className={step === i ? "active" : ""} onClick={() => setStep(i)} onKeyDown={e => onStepKeyDown(e, i)}><I aria-hidden="true" /><span>{i + 1}. {s.label}</span></button>; })}</div><div className="u1-step-body" role="tabpanel" id={panelId} aria-labelledby={tabId(step)} tabIndex={0}><span>0{step + 1}</span><div><h3>{steps[step].label}</h3><p>{steps[step].text}</p></div></div><div className="u1-check"><div><CircleHelp /><span><b>Quick check</b>{chapter.check.q}</span></div><div className="u1-check-options">{chapter.check.options.map((o, i) => <button className={choice === null ? "" : i === chapter.check.answer ? "correct" : choice === i ? "wrong" : ""} key={o} onClick={() => setChoice(i)}>{choice !== null && i === chapter.check.answer ? <Check /> : <i>{String.fromCharCode(65 + i)}</i>}{o}</button>)}</div>{choice !== null && <p className={correct ? "correct" : "wrong"}>{correct ? "Correct. " : "Not quite. "}{chapter.check.why}</p>}</div></section>;
 }
 
 export function MisconceptionLab({ items }: { items: Misconception[] }) {
@@ -156,10 +169,23 @@ export function StudioShell(props: StudioShellProps) {
   const goTo = (id: string) => { setActive(id); document.getElementById(`${unitKey}-concept`)?.scrollIntoView({ behavior: "smooth" }); };
   const learningPath = useMemo(() => chapters.map(c => ({ c, done: complete.includes(c.id) })), [complete, chapters]);
   const toggleMission = (key: string) => setMissionDone(v => v.includes(key) ? v.filter(x => x !== key) : [...v, key]);
+  const topicTabId = (id: string) => `${unitKey}-tab-${id}`;
+  const topicRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // Same roving-tabindex pattern as the concept-step tabs: arrow keys move the topic
+  // selection (and focus) without needing Tab to cycle through all 18 topic buttons.
+  const onTopicKeyDown = (e: React.KeyboardEvent, i: number) => {
+    let next = i;
+    if (e.key === "ArrowRight") next = (i + 1) % learningPath.length;
+    else if (e.key === "ArrowLeft") next = (i - 1 + learningPath.length) % learningPath.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = learningPath.length - 1;
+    else return;
+    e.preventDefault(); goTo(learningPath[next].c.id); topicRefs.current[next]?.focus();
+  };
   return <div className="u1-wrap" id={`${unitKey}-studio`}>
     <section className="u1-intro"><div><span className="u1-eyebrow"><Sparkles /> {eyebrow}</span><h2>{heading}</h2><p>{description}</p><div className="u1-objectives">{objectives.map(o => <span key={o}><CheckCircle2 />{o}</span>)}</div></div><div className="u1-progress-ring" style={{ "--p": `${pct * 3.6}deg` } as React.CSSProperties}><div><strong>{pct}%</strong><span>{complete.length}/{chapters.length} topics</span></div></div></section>
-    <section className="u1-path"><div className="u1-path-head"><div><p>YOUR LEARNING PATH</p><h2>Choose a topic</h2></div><span>Progress saves automatically</span></div><div className="u1-topic-grid" role="tablist" aria-label="Unit topics">{learningPath.map(({ c, done }) => { const I = c.icon; return <button key={c.id} role="tab" aria-selected={active === c.id} aria-current={active === c.id ? "true" : undefined} className={active === c.id ? "active" : ""} onClick={() => goTo(c.id)}><span><I aria-hidden="true" /></span><div><small>{c.number}</small><b>{c.short}</b></div>{done ? <i aria-label="completed"><Check aria-hidden="true" /></i> : <ChevronDown aria-hidden="true" />}</button>; })}</div></section>
-    <div id={`${unitKey}-concept`}>
+    <section className="u1-path"><div className="u1-path-head"><div><p>YOUR LEARNING PATH</p><h2>Choose a topic</h2></div><span>Progress saves automatically</span></div><div className="u1-topic-grid" role="tablist" aria-label="Unit topics">{learningPath.map(({ c, done }, i) => { const I = c.icon; return <button key={c.id} ref={el => { topicRefs.current[i] = el; }} id={topicTabId(c.id)} role="tab" aria-selected={active === c.id} aria-current={active === c.id ? "true" : undefined} aria-controls={`${unitKey}-concept`} tabIndex={active === c.id ? 0 : -1} className={active === c.id ? "active" : ""} onClick={() => goTo(c.id)} onKeyDown={e => onTopicKeyDown(e, i)}><span><I aria-hidden="true" /></span><div><small>{c.number}</small><b>{c.short}</b></div>{done ? <i aria-label="completed"><Check aria-hidden="true" /></i> : <ChevronDown aria-hidden="true" />}</button>; })}</div></section>
+    <div id={`${unitKey}-concept`} role="tabpanel" aria-labelledby={topicTabId(active)}>
       <nav className="u1-chapter-nav" aria-label="Adjacent topics">
         <button disabled={!prev} onClick={() => prev && goTo(prev.id)}><ChevronLeft aria-hidden="true" /><span>{prev ? <><small>Previous</small><b>{prev.number} {prev.short}</b></> : <b>Start of unit</b>}</span></button>
         <span className="u1-chapter-nav-count">{index + 1} / {chapters.length}</span>
