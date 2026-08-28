@@ -6,6 +6,8 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleHelp,
   Code2,
   FunctionSquare,
@@ -16,6 +18,14 @@ import {
   Sigma,
   Sparkles,
 } from "lucide-react";
+
+function readJSON<T>(key: string, fallback: T): T {
+  try { const s = localStorage.getItem(key); if (s) return JSON.parse(s) as T; } catch { }
+  return fallback;
+}
+function writeJSON(key: string, value: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { }
+}
 
 // ---------------------------------------------------------------------------
 // Shared "learning studio" kit used by every unit's deep-dive component.
@@ -84,7 +94,7 @@ export function PythonPanel({ chapter, pythonByChapter }: { chapter: Chapter; py
   const [open, setOpen] = useState(false), [ran, setRan] = useState(false), sample = pythonByChapter[chapter.id];
   useEffect(() => { setOpen(false); setRan(false); }, [chapter.id]);
   if (!sample) return null;
-  return <section className="u1-python"><div><div><Code2 /><span><b>NumPy connection</b>See how the visual experiment is expressed in Python.</span></div><button onClick={() => setOpen(v => !v)}>{open ? "Hide code" : "Open code lab"}<ChevronDown /></button></div>{open && <div className="u1-python-body"><div className="u1-code-window"><header><i /><i /><i /><span>{chapter.id}_lab.py</span></header><pre><code>import numpy as np{"\n\n"}{sample.code}</code></pre></div><div className="u1-run-panel"><button onClick={() => setRan(true)}><Play />Run example</button><span>Expected output</span><pre>{ran ? sample.output : "Click Run example to reveal and check the result."}</pre></div></div>}</section>;
+  return <section className="u1-python"><div><div><Code2 /><span><b>NumPy connection</b>See how the visual experiment is expressed in Python — this is a worked reference, not a live code runner.</span></div><button onClick={() => setOpen(v => !v)}>{open ? "Hide code" : "Open code lab"}<ChevronDown /></button></div>{open && <div className="u1-python-body"><div className="u1-code-window"><header><i /><i /><i /><span>{chapter.id}_lab.py</span></header><pre><code>import numpy as np{"\n\n"}{sample.code}</code></pre></div><div className="u1-run-panel"><button onClick={() => setRan(true)}><Play />Reveal expected output</button><span>Expected output</span><pre>{ran ? sample.output : "Click \"Reveal expected output\" to check your own reasoning against it."}</pre></div></div>}</section>;
 }
 
 export function ConceptCard({ chapter }: { chapter: Chapter }) {
@@ -92,7 +102,7 @@ export function ConceptCard({ chapter }: { chapter: Chapter }) {
   const correct = choice === chapter.check.answer;
   useEffect(() => { setStep(0); setChoice(null); }, [chapter.id]);
   const steps = [{ label: "Meaning first", icon: Lightbulb, text: chapter.meaning }, { label: "Tiny numerical example", icon: FunctionSquare, text: chapter.example }, { label: "Formula connected", icon: Sigma, text: chapter.formula }, { label: "Why AI/ML uses it", icon: BrainCircuit, text: chapter.ml }];
-  return <section className="u1-concept"><div className="u1-concept-head"><span>{chapter.number}</span><div><p>GUIDED CONCEPT</p><h2>{chapter.title}</h2></div></div><div className="u1-step-tabs">{steps.map((s, i) => { const I = s.icon; return <button key={s.label} className={step === i ? "active" : ""} onClick={() => setStep(i)}><I /><span>{i + 1}. {s.label}</span></button>; })}</div><div className="u1-step-body"><span>0{step + 1}</span><div><h3>{steps[step].label}</h3><p>{steps[step].text}</p></div></div><div className="u1-check"><div><CircleHelp /><span><b>Quick check</b>{chapter.check.q}</span></div><div className="u1-check-options">{chapter.check.options.map((o, i) => <button className={choice === null ? "" : i === chapter.check.answer ? "correct" : choice === i ? "wrong" : ""} key={o} onClick={() => setChoice(i)}>{choice !== null && i === chapter.check.answer ? <Check /> : <i>{String.fromCharCode(65 + i)}</i>}{o}</button>)}</div>{choice !== null && <p className={correct ? "correct" : "wrong"}>{correct ? "Correct. " : "Not quite. "}{chapter.check.why}</p>}</div></section>;
+  return <section className="u1-concept"><div className="u1-concept-head"><span>{chapter.number}</span><div><p>GUIDED CONCEPT</p><h2>{chapter.title}</h2></div></div><div className="u1-step-tabs" role="tablist" aria-label="Concept steps">{steps.map((s, i) => { const I = s.icon; return <button key={s.label} role="tab" aria-selected={step === i} className={step === i ? "active" : ""} onClick={() => setStep(i)}><I aria-hidden="true" /><span>{i + 1}. {s.label}</span></button>; })}</div><div className="u1-step-body"><span>0{step + 1}</span><div><h3>{steps[step].label}</h3><p>{steps[step].text}</p></div></div><div className="u1-check"><div><CircleHelp /><span><b>Quick check</b>{chapter.check.q}</span></div><div className="u1-check-options">{chapter.check.options.map((o, i) => <button className={choice === null ? "" : i === chapter.check.answer ? "correct" : choice === i ? "wrong" : ""} key={o} onClick={() => setChoice(i)}>{choice !== null && i === chapter.check.answer ? <Check /> : <i>{String.fromCharCode(65 + i)}</i>}{o}</button>)}</div>{choice !== null && <p className={correct ? "correct" : "wrong"}>{correct ? "Correct. " : "Not quite. "}{chapter.check.why}</p>}</div></section>;
 }
 
 export function MisconceptionLab({ items }: { items: Misconception[] }) {
@@ -101,10 +111,14 @@ export function MisconceptionLab({ items }: { items: Misconception[] }) {
 }
 
 export function MasteryQuiz({ quiz, storageId, title, subtitle }: { quiz: QuizQuestion[]; storageId: string; title: string; subtitle: string }) {
-  const [answers, setAnswers] = useState<(number | null)[]>(Array(quiz.length).fill(null)), [submitted, setSubmitted] = useState(false);
+  const answersKey = `${storageId}-answers`, submittedKey = `${storageId}-submitted`;
+  const [answers, setAnswers] = useState<(number | null)[]>(() => { const saved = readJSON<(number | null)[]>(answersKey, []); return saved.length === quiz.length ? saved : Array(quiz.length).fill(null); });
+  const [submitted, setSubmitted] = useState(() => readJSON<boolean>(submittedKey, false));
+  useEffect(() => { writeJSON(answersKey, answers); }, [answers, answersKey]);
+  useEffect(() => { writeJSON(submittedKey, submitted); }, [submitted, submittedKey]);
   const score = answers.reduce<number>((s, v, i) => s + (v === quiz[i].a ? 1 : 0), 0), complete = answers.every(v => v !== null);
   const reset = () => { setAnswers(Array(quiz.length).fill(null)); setSubmitted(false); };
-  return <section className="u1-mastery" id={storageId}><div className="u1-mastery-head"><div><span><BookOpen /> MASTERY CHECK</span><h2>{title}</h2><p>{subtitle}</p></div>{submitted && <div className="u1-grade"><strong>{score}/{quiz.length}</strong><span>{score === quiz.length ? "Excellent" : score >= Math.ceil(quiz.length * 0.7) ? "Good foundation" : "Review the highlighted topics"}</span></div>}</div><div className="u1-quiz-grid">{quiz.map((q, i) => <article key={q.q}><b>{i + 1}</b><p>{q.q}</p>{q.o.map((o, j) => <button disabled={submitted} className={submitted ? (j === q.a ? "correct" : answers[i] === j ? "wrong" : "") : answers[i] === j ? "selected" : ""} onClick={() => setAnswers(v => v.map((x, k) => k === i ? j : x))} key={o}>{o}</button>)}</article>)}</div><div className="u1-quiz-actions"><button className="u1-primary" disabled={!complete} onClick={() => setSubmitted(true)}>{submitted ? "Score shown" : "Check my answers"}<ArrowRight /></button>{submitted && <button className="u1-secondary" onClick={reset}><RotateCcw />Try again</button>}<span>{complete ? "All questions answered" : "Answer every question to check your score"}</span></div></section>;
+  return <section className="u1-mastery" id={storageId}><div className="u1-mastery-head"><div><span><BookOpen /> MASTERY CHECK</span><h2>{title}</h2><p>{subtitle}</p></div>{submitted && <div className="u1-grade"><strong>{score}/{quiz.length}</strong><span>{score === quiz.length ? "Excellent" : score >= Math.ceil(quiz.length * 0.7) ? "Good foundation" : "Review the highlighted topics"}</span></div>}</div><div className="u1-quiz-grid">{quiz.map((q, i) => <article key={q.q}><b>{i + 1}</b><p>{q.q}</p>{q.o.map((o, j) => <button disabled={submitted} aria-pressed={answers[i] === j} className={submitted ? (j === q.a ? "correct" : answers[i] === j ? "wrong" : "") : answers[i] === j ? "selected" : ""} onClick={() => setAnswers(v => v.map((x, k) => k === i ? j : x))} key={o}>{o}</button>)}</article>)}</div><div className="u1-quiz-actions"><button className="u1-primary" disabled={!complete} onClick={() => setSubmitted(true)}>{submitted ? "Score shown" : "Check my answers"}<ArrowRight /></button>{submitted && <button className="u1-secondary" onClick={reset}><RotateCcw />Try again</button>}<span>{complete ? "All questions answered" : "Answer every question to check your score"}</span></div></section>;
 }
 
 export type StudioShellProps = {
@@ -127,8 +141,8 @@ export type StudioShellProps = {
 /** Generic orchestrator that reproduces Unit1Studio's layout for any unit. */
 export function StudioShell(props: StudioShellProps) {
   const { unitKey, eyebrow, heading, description, objectives, chapters, missions, pythonByChapter, renderLab, summarySentence, misconceptions, quiz, quizTitle, quizSubtitle } = props;
-  const topicKey = `${unitKey}-topic-progress`, missionKey = `${unitKey}-mission-progress`;
-  const [active, setActive] = useState(chapters[0].id);
+  const topicKey = `${unitKey}-topic-progress`, missionKey = `${unitKey}-mission-progress`, activeKey = `${unitKey}-active-chapter`;
+  const [active, setActive] = useState<string>(() => { const saved = readJSON<string | null>(activeKey, null); return saved && chapters.some(c => c.id === saved) ? saved : chapters[0].id; });
   const [complete, setComplete] = useState<string[]>([]);
   const [missionDone, setMissionDone] = useState<string[]>([]);
   const chapter = chapters.find(c => c.id === active)!;
@@ -136,14 +150,23 @@ export function StudioShell(props: StudioShellProps) {
   useEffect(() => { localStorage.setItem(topicKey, JSON.stringify(complete)); }, [complete, topicKey]);
   useEffect(() => { try { const s = localStorage.getItem(missionKey); if (s) setMissionDone(JSON.parse(s)); } catch { } }, [missionKey]);
   useEffect(() => { localStorage.setItem(missionKey, JSON.stringify(missionDone)); }, [missionDone, missionKey]);
-  const index = chapters.findIndex(c => c.id === active), pct = Math.round(complete.length / chapters.length * 100), next = chapters[index + 1];
+  useEffect(() => { writeJSON(activeKey, active); }, [active, activeKey]);
+  const index = chapters.findIndex(c => c.id === active), pct = Math.round(complete.length / chapters.length * 100), next = chapters[index + 1], prev = chapters[index - 1];
   const mark = () => { if (!complete.includes(active)) setComplete(v => [...v, active]); if (next) { setActive(next.id); setTimeout(() => document.getElementById(`${unitKey}-studio`)?.scrollIntoView({ behavior: "smooth" }), 50); } };
+  const goTo = (id: string) => { setActive(id); document.getElementById(`${unitKey}-concept`)?.scrollIntoView({ behavior: "smooth" }); };
   const learningPath = useMemo(() => chapters.map(c => ({ c, done: complete.includes(c.id) })), [complete, chapters]);
   const toggleMission = (key: string) => setMissionDone(v => v.includes(key) ? v.filter(x => x !== key) : [...v, key]);
   return <div className="u1-wrap" id={`${unitKey}-studio`}>
     <section className="u1-intro"><div><span className="u1-eyebrow"><Sparkles /> {eyebrow}</span><h2>{heading}</h2><p>{description}</p><div className="u1-objectives">{objectives.map(o => <span key={o}><CheckCircle2 />{o}</span>)}</div></div><div className="u1-progress-ring" style={{ "--p": `${pct * 3.6}deg` } as React.CSSProperties}><div><strong>{pct}%</strong><span>{complete.length}/{chapters.length} topics</span></div></div></section>
-    <section className="u1-path"><div className="u1-path-head"><div><p>YOUR LEARNING PATH</p><h2>Choose a topic</h2></div><span>Progress saves automatically</span></div><div className="u1-topic-grid">{learningPath.map(({ c, done }) => { const I = c.icon; return <button key={c.id} className={active === c.id ? "active" : ""} onClick={() => { setActive(c.id); document.getElementById(`${unitKey}-concept`)?.scrollIntoView({ behavior: "smooth" }); }}><span><I /></span><div><small>{c.number}</small><b>{c.short}</b></div>{done ? <i><Check /></i> : <ChevronDown />}</button>; })}</div></section>
-    <div id={`${unitKey}-concept`}><ConceptCard chapter={chapter} />{renderLab(chapter.id)}<MissionPanel chapter={chapter} missions={missions} completed={missionDone} toggle={toggleMission} /><PythonPanel chapter={chapter} pythonByChapter={pythonByChapter} /><section className="u1-topic-finish"><div><CheckCircle2 /><span><b>Finished experimenting with {chapter.number}?</b>Mark it understood and continue. You can revisit it at any time.</span></div><button onClick={mark}>{complete.includes(active) ? "Continue" : `Mark ${chapter.number} understood`}<ArrowRight /></button></section></div>
+    <section className="u1-path"><div className="u1-path-head"><div><p>YOUR LEARNING PATH</p><h2>Choose a topic</h2></div><span>Progress saves automatically</span></div><div className="u1-topic-grid" role="tablist" aria-label="Unit topics">{learningPath.map(({ c, done }) => { const I = c.icon; return <button key={c.id} role="tab" aria-selected={active === c.id} aria-current={active === c.id ? "true" : undefined} className={active === c.id ? "active" : ""} onClick={() => goTo(c.id)}><span><I aria-hidden="true" /></span><div><small>{c.number}</small><b>{c.short}</b></div>{done ? <i aria-label="completed"><Check aria-hidden="true" /></i> : <ChevronDown aria-hidden="true" />}</button>; })}</div></section>
+    <div id={`${unitKey}-concept`}>
+      <nav className="u1-chapter-nav" aria-label="Adjacent topics">
+        <button disabled={!prev} onClick={() => prev && goTo(prev.id)}><ChevronLeft aria-hidden="true" /><span>{prev ? <><small>Previous</small><b>{prev.number} {prev.short}</b></> : <b>Start of unit</b>}</span></button>
+        <span className="u1-chapter-nav-count">{index + 1} / {chapters.length}</span>
+        <button disabled={!next} onClick={() => next && goTo(next.id)}><span>{next ? <><small>Next</small><b>{next.number} {next.short}</b></> : <b>End of unit</b>}</span><ChevronRight aria-hidden="true" /></button>
+      </nav>
+      <ConceptCard chapter={chapter} />{renderLab(chapter.id)}<MissionPanel chapter={chapter} missions={missions} completed={missionDone} toggle={toggleMission} /><PythonPanel chapter={chapter} pythonByChapter={pythonByChapter} /><section className="u1-topic-finish"><div><CheckCircle2 /><span><b>Finished experimenting with {chapter.number}?</b>Mark it understood and continue. You can revisit it at any time.</span></div><button onClick={mark}>{complete.includes(active) ? "Continue" : `Mark ${chapter.number} understood`}<ArrowRight /></button></section>
+    </div>
     <section className="u1-map"><div><Network /><span><b>The unit in one sentence</b>{summarySentence}</span></div></section>
     <MisconceptionLab items={misconceptions} />
     <MasteryQuiz quiz={quiz} storageId={`${unitKey}-quiz`} title={quizTitle} subtitle={quizSubtitle} />

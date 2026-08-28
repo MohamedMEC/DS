@@ -104,7 +104,7 @@ function BinomialLab() {
       <div className="u1-stats"><Stat label="E[X] = np" value={f(meanX)} /><Stat label="Var(X) = np(1−p)" value={f(varX)} />{selectedK !== null && <><Stat label={`P(X = ${selectedK})`} value={f(pmf[selectedK], 4)} good /><Stat label={`P(X ≤ ${selectedK})`} value={f(cdf!, 4)} /></>}</div>
     </div>
       <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230"><line x1="30" y1="210" x2="400" y2="210" className="axis" />{k.map(ki => <rect key={ki} x={38 + ki * barW} y={210 - (pmf[ki] / maxPmf) * 180} width={barW - 3} height={(pmf[ki] / maxPmf) * 180} className="bar" opacity={selectedK === ki ? 1 : 0.5} onClick={() => setSelectedK(ki)} style={{ cursor: "pointer" }} />)}</svg></div></div>
-    <div className="u1-observation"><Dices /><p><b>Shape:</b> the distribution peaks near E[X]={f(meanX, 1)} and becomes more symmetric as n grows, whatever p is set to.</p></div>
+    <div className="u1-observation"><Dices /><p><b>Shape:</b> the distribution peaks near E[X]={f(meanX, 1)}. {Math.abs(p - 0.5) < 0.15 ? "With p close to 0.5 it already looks close to symmetric." : n * Math.min(p, 1 - p) >= 8 ? `Even with p=${f(p, 2)} pulling it off-centre, n=${n} is large enough that the shape stays fairly symmetric.` : `With p=${f(p, 2)} far from 0.5 and only n=${n} trials, the shape is visibly skewed toward the near edge — it takes a larger n for skewed p values to look symmetric.`} For any fixed p, larger n does move the shape closer to symmetric — but how large "large" needs to be depends on how far p sits from 0.5.</p></div>
   </LabShell>;
 }
 
