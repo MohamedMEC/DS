@@ -70,7 +70,7 @@ const chapters: Chapter[] = [
     icon: Plus,
     meaning: "Adding two vectors combines their components one-by-one, and geometrically it means placing the second vector's tail at the first vector's tip — the sum is the straight arrow from the very start to the very end.",
     example: "A delivery walks [3,1] then [1,2] more blocks. The combined trip is [3,1]+[1,2]=[4,3] — the direct route from start to finish, even though the walker took two separate legs.",
-    formula: "u + v = [u₁+v₁, u₂+v₂]   •   commutative: u+v = v+u",
+    formula: "u + v = [u₁+v₁, u₂+v₂]   •   commutative: u+v = v+u   •   the angle shown below is not part of addition — it's the dot-product topic next (1.3)",
     ml: "Averaging embeddings, accumulating gradient updates during training, and combining word vectors ('king' direction + 'royal' direction) are all repeated vector additions.",
     check: { q: "Geometrically, u+v is drawn by…", options: ["Placing v's tail at u's tip, then connecting start to end", "Rotating u by v's angle", "Multiplying every component"], answer: 0, why: "This 'tip-to-tail' placement is exactly what component-wise addition produces geometrically." },
   },
