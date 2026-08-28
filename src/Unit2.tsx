@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Dices, Eye, GitBranch, Percent, Play, RotateCcw, Shuffle, Sigma, Stethoscope, TrendingUp } from "lucide-react";
+import { ArrowRight, Dices, Eye, GitBranch, GitMerge, Percent, PieChart, Play, RotateCcw, Shuffle, Sigma, Stethoscope, TrendingUp } from "lucide-react";
 import { Chapter, LabShell, MiniRange, NumberBox, Stat, StudioShell, f } from "./studio-kit";
 
 const chapters: Chapter[] = [
@@ -36,7 +36,23 @@ const chapters: Chapter[] = [
     check: { q: "If P(A)=0.5, P(B)=0.5 and P(A∩B)=0.3, are A and B independent?", options: ["Yes, both probabilities are 0.5", "No, because 0.3 ≠ 0.5×0.5", "Cannot be determined"], answer: 1, why: "Independence requires the joint probability to equal the product exactly; 0.3 does not equal 0.25, so they are dependent." },
   },
   {
-    id: "bayes", number: "2.5", title: "Bayes' theorem: reversing the condition", short: "Bayes' theorem", icon: Stethoscope,
+    id: "multiplication-rule", number: "2.5", title: "The multiplication rule: chaining conditional steps", short: "Multiplication rule", icon: GitMerge,
+    meaning: "Rearranging the conditional probability formula gives the multiplication rule: P(A∩B) = P(A)·P(B|A). It lets you build the probability of a whole sequence of events by multiplying each step's probability, conditioned on everything before it.",
+    example: "Drawing two cards without replacement from a 52-card deck: P(both aces) = P(1st ace) × P(2nd ace | 1st ace) = (4/52) × (3/51) ≈ 0.0045 — much smaller than either single draw's probability, because the second draw depends on the first.",
+    formula: "P(A∩B) = P(A)·P(B|A) = P(B)·P(A|B)   •   chains to 3+ events: P(A∩B∩C) = P(A)·P(B|A)·P(C|A∩B)",
+    ml: "This 'chain rule of probability' is exactly how language models score a sentence: P(w₁,w₂,…,wₙ) = P(w₁)·P(w₂|w₁)·P(w₃|w₁,w₂)·… — each word's probability is conditioned on every word before it.",
+    check: { q: "For dependent events, why can't you just multiply P(A) and P(B) directly?", options: ["P(B) may change once A is known to have happened, so P(B|A) is needed instead", "Multiplication only works for independent events entirely", "P(A) and P(B) are always equal"], answer: 0, why: "The multiplication rule uses P(B|A), not the plain P(B), precisely because knowing A occurred can shift B's probability." },
+  },
+  {
+    id: "total-probability", number: "2.6", title: "The law of total probability: averaging over every path", short: "Total probability", icon: PieChart,
+    meaning: "When an event can happen through several distinct, non-overlapping pathways that together cover every possibility (a partition), the law of total probability says the overall probability is a weighted average of each pathway's conditional probability, weighted by how likely that pathway is.",
+    example: "A factory's three machines produce 50%, 30% and 20% of items, with defect rates of 2%, 3% and 5%. The overall defect rate is P(defect) = 0.5×0.02 + 0.3×0.03 + 0.2×0.05 = 0.029 — a production-weighted blend of all three machines.",
+    formula: "P(B) = Σᵢ P(B|Aᵢ)·P(Aᵢ), where A₁,…,Aₖ partition the sample space (mutually exclusive, covering everything)",
+    ml: "This is exactly the denominator P(E) in Bayes' theorem, and it's also how ensemble and mixture models compute an overall prediction by averaging each component's prediction, weighted by how likely that component is.",
+    check: { q: "The law of total probability requires the groups A₁…Aₖ to be…", options: ["Mutually exclusive and together covering every possibility", "All exactly the same size", "Independent of event B"], answer: 0, why: "Only a true partition of the sample space lets you add up each pathway's contribution without double-counting or missing outcomes." },
+  },
+  {
+    id: "bayes", number: "2.7", title: "Bayes' theorem: reversing the condition", short: "Bayes' theorem", icon: Stethoscope,
     meaning: "Bayes' theorem converts P(evidence | cause) — usually the thing we can measure — into P(cause | evidence) — usually the thing we actually want to know.",
     example: "A rare disease affects 1% of people. A test is 95% sensitive and 90% specific. Even with a positive result, most positives come from the huge pool of healthy people who got a false positive — the true P(disease | positive) is much lower than 95%.",
     formula: "P(H|E) = P(E|H)·P(H) / P(E)   •   P(E) = P(E|H)P(H) + P(E|¬H)P(¬H)",
@@ -44,7 +60,7 @@ const chapters: Chapter[] = [
     check: { q: "Why can a positive result on a 95%-accurate test still be more likely wrong than right?", options: ["The test is broken", "When the condition is rare, false positives from the large healthy group can outnumber true positives", "Bayes' theorem does not apply to rare events"], answer: 1, why: "With a low prior (rare disease), even a small false-positive rate applied to a huge healthy population can produce more false positives than true positives." },
   },
   {
-    id: "expectation", number: "2.6", title: "Random variables, expectation and variance", short: "Expectation & variance", icon: TrendingUp,
+    id: "expectation", number: "2.8", title: "Random variables, expectation and variance", short: "Expectation & variance", icon: TrendingUp,
     meaning: "A random variable assigns a number to each outcome. Its expectation E[X] is the probability-weighted average value — the long-run average over many repetitions. Variance measures how spread out the outcomes typically are around that average.",
     example: "A fair die has E[X] = 1(1/6)+2(1/6)+...+6(1/6) = 3.5 — a value the die can never actually show, but the long-run average of many rolls.",
     formula: "E[X] = Σ xᵢP(xᵢ)   •   Var(X) = Σ P(xᵢ)(xᵢ−E[X])²   •   SD(X) = √Var(X)",
@@ -58,6 +74,8 @@ const missions: Record<string, string[]> = {
   "prob-rules": ["Pick a target sum and confirm P(A)+P(Aᶜ)=1.", "Turn on the 'at least one 6' event and watch the overlap cells highlight.", "Verify the union probability equals P(A)+P(B)−P(A∩B) using the live numbers."],
   conditional: ["Set die 1 to a fixed value and watch the conditional probability change.", "Make P(A|B) larger than the unconditional P(A) and explain why.", "Make P(A|B) equal to P(A) — what does that tell you about A and B?"],
   independence: ["Enter contingency counts where P(A∩B) exactly equals P(A)×P(B).", "Change one count so the events become dependent.", "Make A and B almost perfectly dependent (large gap between P(A∩B) and P(A)P(B))."],
+  "multiplication-rule": ["Compute P(1st draw matches) then P(2nd draw matches | 1st matched) and multiply them.", "Switch to 3 draws and watch the chain lengthen and the product shrink further.", "Compare the chained product against the independent (with-replacement) product."],
+  "total-probability": ["Adjust each pathway's share and confirm the three shares sum to exactly 1.", "Raise one pathway's rate and check the overall rate shifts by exactly that pathway's weight.", "Make all three rates equal and confirm the overall rate matches them regardless of the shares."],
   bayes: ["Set prevalence to 1% and read off the positive predictive value.", "Raise specificity toward 99.9% and watch PPV improve.", "Raise prevalence to 50% and compare PPV to the low-prevalence case."],
   expectation: ["Make every payout equal so variance drops to zero.", "Create a high-risk, high-reward payout table and read the resulting SD.", "Switch to the loaded die and see how E[X] shifts toward the favoured face."],
 };
@@ -67,6 +85,8 @@ const pythonByChapter: Record<string, { code: string; output: string }> = {
   "prob-rules": { code: "A = {o for o in outcomes if sum(o) == 7}\nB = {o for o in outcomes if 6 in o}\nunion = A | B\nprint(len(A)/36, len(B)/36, len(A & B)/36)\nprint(len(union)/36)", output: "0.16666666666666666 0.3055555555555556 0.05555555555555555\n0.4166666666666667" },
   conditional: { code: "# A: sum == 7   B: first die shows 4\nA_and_B = sum(1 for i, j in outcomes if i == 4 and i+j == 7)\nB = sum(1 for i, j in outcomes if i == 4)\nprint(A_and_B/36, B/36, A_and_B/B)", output: "0.027777777777777776 0.16666666666666666 0.16666666666666666" },
   independence: { code: "a, b, c, d = 30, 20, 10, 40   # contingency table counts\nN = a + b + c + d\npA, pB, pAB = (a+b)/N, (a+c)/N, a/N\nprint(pA * pB, pAB)", output: "0.2 0.3" },
+  "multiplication-rule": { code: "p_ace1 = 4 / 52\np_ace2_given_ace1 = 3 / 51\np_both = p_ace1 * p_ace2_given_ace1\nprint(p_ace1, p_ace2_given_ace1)\nprint(round(p_both, 4))", output: "0.07692307692307693 0.058823529411764705\n0.0045" },
+  "total-probability": { code: "shares = [0.5, 0.3, 0.2]\nrates = [0.02, 0.03, 0.05]\noverall = sum(s * r for s, r in zip(shares, rates))\nprint(round(overall, 4))", output: "0.029" },
   bayes: { code: "p, se, sp = 0.01, 0.95, 0.90\ntp = p * se\nfp = (1 - p) * (1 - sp)\nppv = tp / (tp + fp)\nprint(round(ppv, 4))", output: "0.0876" },
   expectation: { code: "x = np.array([1, 2, 3, 4, 5, 6])\np = np.array([1/6] * 6)\nmean = np.sum(x * p)\nvar = np.sum(p * (x - mean)**2)\nprint(mean, var, np.sqrt(var))", output: "3.5 2.9166666666666665 1.707825127659933" },
 };
@@ -171,11 +191,72 @@ function ExpectationLab() {
   </LabShell>;
 }
 
+function MultiplicationRuleLab() {
+  const [total, setTotal] = useState(52), [matching, setMatching] = useState(4), [draws, setDraws] = useState(2);
+  const steps: { label: string; p: number }[] = [];
+  let remainingTotal = total, remainingMatch = matching, product = 1;
+  for (let i = 0; i < draws; i++) {
+    const p = remainingTotal > 0 ? remainingMatch / remainingTotal : 0;
+    steps.push({ label: i === 0 ? `P(draw ${i + 1} matches)` : `P(draw ${i + 1} matches | previous ${i} matched)`, p });
+    product *= p;
+    remainingTotal -= 1; remainingMatch -= 1;
+  }
+  const independentProduct = Math.pow(total ? matching / total : 0, draws);
+  return <LabShell title="Chain conditional steps with the multiplication rule" goal="Draw items without replacement and watch each step's probability shrink the pool for the next draw.">
+    <div className="u1-lab-grid"><div className="u1-controls">
+      <div className="u1-control-pair"><NumberBox label="total items" value={total} onChange={setTotal} step="1" /><NumberBox label="matching items" value={matching} onChange={setMatching} step="1" /></div>
+      <div className="u1-presets"><button className={draws === 2 ? "active" : ""} onClick={() => setDraws(2)}>2 draws</button><button className={draws === 3 ? "active" : ""} onClick={() => setDraws(3)}>3 draws</button></div>
+      <div className="u1-equation-stack">
+        {steps.map((s, i) => <span key={i}>{s.label} = {f(s.p, 4)}</span>)}
+        <span>Product = {steps.map(s => f(s.p, 3)).join(" × ")} = <b>{f(product, 4)}</b></span>
+      </div>
+      <div className="u1-stats"><Stat label="P(all match), without replacement" value={f(product, 4)} good /><Stat label="If independent (with replacement)" value={f(independentProduct, 4)} /></div>
+    </div>
+      <div className="u1-visual"><svg viewBox="0 0 380 160" width="100%" height="160">
+        {steps.map((s, i) => <g key={i}>
+          <rect x={20 + i * 125} y="40" width="100" height="60" rx="10" fill={i === 0 ? "#6d4aff" : "#ec5d67"} opacity={0.85} />
+          <text x={70 + i * 125} y="65" textAnchor="middle" fontSize="11" fill="#fff">draw {i + 1}</text>
+          <text x={70 + i * 125} y="83" textAnchor="middle" fontSize="12" fill="#fff">{f(s.p, 3)}</text>
+          {i < steps.length - 1 && <text x={128 + i * 125} y="76" fontSize="16" fill="#7a8496">×</text>}
+        </g>)}
+      </svg></div></div>
+    <div className="u1-observation"><GitMerge /><p><b>Chain rule:</b> each draw's probability is conditioned on every draw that came before it — removing a matching item shrinks both the pool and the matching count, so probabilities compound faster than independent draws would.</p></div>
+  </LabShell>;
+}
+
+function TotalProbabilityLab() {
+  const [shares, setShares] = useState([0.5, 0.3, 0.2]);
+  const [rates, setRates] = useState([0.02, 0.03, 0.05]);
+  const setShare = (i: number, v: number) => setShares(s => s.map((x, j) => j === i ? v : x));
+  const setRate = (i: number, v: number) => setRates(s => s.map((x, j) => j === i ? v : x));
+  const shareSum = shares.reduce((a, b) => a + b, 0);
+  const contributions = shares.map((share, i) => share * rates[i]);
+  const overall = contributions.reduce((a, b) => a + b, 0);
+  const maxContribution = Math.max(0.001, ...contributions);
+  const labels = ["Machine A", "Machine B", "Machine C"];
+  return <LabShell title="Average over every pathway with the law of total probability" goal="Edit each pathway's share of production and its own defect rate, and watch the overall defect rate blend all three.">
+    <div className="u1-lab-grid"><div className="u1-controls">
+      {labels.map((lab, i) => <div key={i} className="u1-control-pair"><NumberBox label={`${lab} share`} value={shares[i]} onChange={v => setShare(i, v)} step="0.01" /><NumberBox label={`${lab} defect rate`} value={rates[i]} onChange={v => setRate(i, v)} step="0.001" /></div>)}
+      <div className={`u1-observation ${Math.abs(shareSum - 1) > 0.01 ? "warn" : ""}`}><PieChart /><p>Shares sum to <b>{f(shareSum, 2)}</b>{Math.abs(shareSum - 1) > 0.01 ? " — a partition must sum to exactly 1." : " — a valid partition."}</p></div>
+      <div className="u1-stats">{labels.map((lab, i) => <Stat key={i} label={`${lab}: share × rate`} value={f(contributions[i], 4)} />)}<Stat label="Overall P(defect)" value={f(overall, 4)} good /></div>
+    </div>
+      <div className="u1-visual"><svg viewBox="0 0 380 180" width="100%" height="180">
+        <line x1="20" y1="150" x2="360" y2="150" className="axis" />
+        {contributions.map((v, i) => <g key={i}><rect x={40 + i * 110} y={150 - (v / maxContribution) * 120} width="70" height={(v / maxContribution) * 120} className="bar" /><text x={75 + i * 110} y="164" textAnchor="middle" fontSize="10" fill="#7a8496">{labels[i]}</text><text x={75 + i * 110} y={150 - (v / maxContribution) * 120 - 6} textAnchor="middle" fontSize="10" fill="#4b2dcc">{f(v, 3)}</text></g>)}
+        <line x1="20" y1={150 - (overall / maxContribution) * 120} x2="360" y2={150 - (overall / maxContribution) * 120} stroke="#ec5d67" strokeWidth="2" strokeDasharray="6" />
+        <text x="365" y={150 - (overall / maxContribution) * 120 + 4} fontSize="10" fill="#ec5d67">total</text>
+      </svg></div></div>
+    <div className="u1-observation"><Sigma /><p><b>Weighted blend:</b> the overall probability isn't a plain average of the three rates — it's weighted by how much each pathway contributes to the whole, exactly like Bayes' theorem's denominator P(E).</p></div>
+  </LabShell>;
+}
+
 function ChapterLab({ id }: { id: string }) {
   if (id === "sample-space") return <DiceGridLab mode="single" />;
   if (id === "prob-rules") return <DiceGridLab mode="rules" />;
   if (id === "conditional") return <ConditionalLab />;
   if (id === "independence") return <ConditionalLab independenceFocus />;
+  if (id === "multiplication-rule") return <MultiplicationRuleLab />;
+  if (id === "total-probability") return <TotalProbabilityLab />;
   if (id === "bayes") return <BayesLab />;
   return <ExpectationLab />;
 }
@@ -187,6 +268,8 @@ const misconceptions = [
   { s: "P(A|B) is generally the same number as P(B|A).", truth: false, why: "Confusing the two is called 'the confusion of the inverse' — Bayes' theorem exists precisely to convert one into the other correctly." },
   { s: "Expectation is the value you should expect on any single trial.", truth: false, why: "E[X] is a long-run average across many repetitions and may not even be a value the variable can actually take, like 3.5 on a die." },
   { s: "If P(A)=0.5 and P(B)=0.5, A and B must be independent.", truth: false, why: "Independence requires P(A∩B)=P(A)P(B) exactly — two events can each have probability 0.5 while being strongly dependent." },
+  { s: "The multiplication rule P(A∩B)=P(A)·P(B|A) only works when A and B are independent.", truth: false, why: "It holds for any two events — for independent events P(B|A) just simplifies to the plain P(B), but the rule itself is completely general." },
+  { s: "The law of total probability requires each pathway to be equally likely.", truth: false, why: "The pathways only need to be mutually exclusive and cover every possibility — their shares can be any values at all, as long as they sum to 1." },
   { s: "Variance can never be negative.", truth: true, why: "Variance sums squared deviations from the mean, and squares are never negative, so variance is always ≥ 0." },
   { s: "Bayes' theorem is a tool specific to medical testing.", truth: false, why: "It is a general rule for updating any prior belief with new evidence — spam filters, search ranking and A/B testing all use it." },
   { s: "Adding more possible outcomes to a sample space always lowers the probability of a specific event.", truth: false, why: "It depends entirely on how many of the new outcomes fall inside the event — probability is about the event's share of the space, not the space's size alone." },
@@ -197,6 +280,8 @@ const quiz = [
   { q: "P(A∪B) = P(A)+P(B)−P(A∩B) corrects for…", o: ["Rounding error", "Double-counting the overlap", "Events being independent"], a: 1 },
   { q: "Conditional probability P(A|B) restricts attention to…", o: ["Only outcomes where B happened", "The entire original sample space", "Only outcomes where A happened"], a: 0 },
   { q: "Two events are independent exactly when…", o: ["P(A∩B) = P(A)·P(B)", "P(A) = P(B)", "They cannot occur together"], a: 0 },
+  { q: "The multiplication rule P(A∩B) = P(A)·P(B|A) is also known as…", o: ["The chain rule of probability", "The addition rule", "Bayes' theorem"], a: 0 },
+  { q: "The law of total probability requires the pathway groups to be…", o: ["A partition: mutually exclusive and covering everything", "All exactly equally likely", "Independent of event B"], a: 0 },
   { q: "Bayes' theorem converts…", o: ["P(evidence|cause) into P(cause|evidence)", "A mean into a variance", "A sample space into an event"], a: 0 },
   { q: "In a rare-disease test, why can PPV be low even with 95% sensitivity?", o: ["The test is always wrong", "False positives from the large healthy group can dominate", "Specificity does not matter"], a: 1 },
   { q: "E[X] for a random variable is…", o: ["The probability-weighted average outcome", "Always the most likely single outcome", "Always zero"], a: 0 },
@@ -210,8 +295,8 @@ export default function Unit2Studio() {
     unitKey="unit2"
     eyebrow="UNIT 2 · COMPLETE LEARNING STUDIO"
     heading={<>Probability and Bayes' theorem you can <em>see and test</em></>}
-    description="Move from counting outcomes to reversing conditional probabilities through six connected topics. Every topic follows meaning → tiny numbers → visual experiment → ML use."
-    objectives={["Count outcomes in a sample space", "Combine and condition events correctly", "Detect independence from real data", "Reverse conditionals with Bayes' theorem"]}
+    description="Move from counting outcomes to reversing conditional probabilities through eight connected topics. Every topic follows meaning → tiny numbers → visual experiment → ML use."
+    objectives={["Count outcomes in a sample space", "Combine and condition events correctly", "Detect independence from real data", "Chain conditional steps and average over pathways", "Reverse conditionals with Bayes' theorem"]}
     chapters={chapters}
     missions={missions}
     pythonByChapter={pythonByChapter}

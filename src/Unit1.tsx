@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
+  Axis3D,
   BookOpen,
   BrainCircuit,
   Check,
@@ -19,9 +20,11 @@ import {
   Lightbulb,
   LineChart,
   LockKeyhole,
+  Minus,
   MoveUpRight,
   Network,
   Play,
+  Plus,
   RotateCcw,
   Sigma,
   Sparkles,
@@ -53,13 +56,49 @@ const chapters: Chapter[] = [
     icon: MoveUpRight,
     meaning: "A vector is an ordered list of numbers. In 2D it can mean a movement; in machine learning it can hold the features of one observation.",
     example: "A student described by [study hours, attendance] = [3, 4] is a two-feature vector. Its length is √(3²+4²)=5.",
-    formula: "Length: ‖v‖ = √(v₁² + v₂²)   •   Sum: u+v = [u₁+v₁, u₂+v₂]",
-    ml: "Every row of a machine-learning dataset is commonly treated as a feature vector.",
+    formula: "Length (magnitude): ‖v‖ = √(v₁² + v₂²)   •   Unit vector: v̂ = v / ‖v‖",
+    ml: "Every row of a machine-learning dataset is commonly treated as a feature vector; its magnitude is often used directly, for example as an embedding's confidence or an L2-regularisation penalty.",
     check: { q: "What does the vector [3, 4] contain?", options: ["One feature", "Two ordered features", "A 3×4 matrix"], answer: 1, why: "A vector stores ordered components—in this case, two." },
   },
   {
-    id: "span",
+    id: "vector-addition",
     number: "1.2",
+    title: "Vector addition: combining two movements",
+    short: "Vector addition",
+    icon: Plus,
+    meaning: "Adding two vectors combines their components one-by-one, and geometrically it means placing the second vector's tail at the first vector's tip — the sum is the straight arrow from the very start to the very end.",
+    example: "A delivery walks [3,1] then [1,2] more blocks. The combined trip is [3,1]+[1,2]=[4,3] — the direct route from start to finish, even though the walker took two separate legs.",
+    formula: "u + v = [u₁+v₁, u₂+v₂]   •   commutative: u+v = v+u",
+    ml: "Averaging embeddings, accumulating gradient updates during training, and combining word vectors ('king' direction + 'royal' direction) are all repeated vector additions.",
+    check: { q: "Geometrically, u+v is drawn by…", options: ["Placing v's tail at u's tip, then connecting start to end", "Rotating u by v's angle", "Multiplying every component"], answer: 0, why: "This 'tip-to-tail' placement is exactly what component-wise addition produces geometrically." },
+  },
+  {
+    id: "vector-subtraction",
+    number: "1.3",
+    title: "Vector subtraction: the gap between two points",
+    short: "Vector subtraction",
+    icon: Minus,
+    meaning: "Subtracting two vectors gives the vector that connects their tips — u−v is 'how do I get from v to u?'. Its length is the straight-line distance between the two points.",
+    example: "Two students score [72,3] and [65,5] on [test score, hours studied]. Their difference [72,3]−[65,5]=[7,−2] describes exactly how the first student differs from the second.",
+    formula: "u − v = [u₁−v₁, u₂−v₂]   •   distance(u,v) = ‖u−v‖   •   NOT commutative: u−v = −(v−u)",
+    ml: "Distance between two feature vectors — used constantly in k-nearest neighbours, k-means clustering and anomaly detection — is just the magnitude of their difference; residuals in regression are also a subtraction of predicted from actual.",
+    check: { q: "The distance between two points u and v equals…", options: ["‖u−v‖, the magnitude of their difference", "u+v", "The angle between them"], answer: 0, why: "Subtracting the vectors gives the connecting vector; its length is the straight-line distance." },
+  },
+  {
+    id: "cross-product",
+    number: "1.4",
+    title: "Cross product: a vector perpendicular to two others",
+    short: "Cross product",
+    icon: Axis3D,
+    meaning: "The cross product takes two 3D vectors and produces a third vector perpendicular to both, following the right-hand rule. Its length equals the area of the parallelogram the two original vectors span.",
+    example: "For a=[1,0,0] and b=[0,1,0] (pointing along x and y), a×b=[0,0,1] — a vector pointing straight up along z, perpendicular to the flat xy-plane both a and b lie in.",
+    formula: "a×b = [a₂b₃−a₃b₂, a₃b₁−a₁b₃, a₁b₂−a₂b₁]   •   ‖a×b‖ = ‖a‖‖b‖sinθ   •   anticommutative: a×b = −(b×a)",
+    ml: "Less common in flat tabular ML, but essential wherever 3D geometry matters: computing surface normals for 3D point-cloud and mesh models, torque and angular velocity in robotics/reinforcement-learning control, and camera/pose geometry in computer vision.",
+    check: { q: "The cross product a×b is perpendicular to…", options: ["Only a", "Only b", "Both a and b"], answer: 2, why: "That's its defining property — a×b points in the one direction perpendicular to the plane containing both a and b." },
+  },
+  {
+    id: "span",
+    number: "1.5",
     title: "Linear combinations, span and independence",
     short: "Span & independence",
     icon: Triangle,
@@ -71,7 +110,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "dot",
-    number: "1.3",
+    number: "1.6",
     title: "Dot product, angle and projection",
     short: "Dot & projection",
     icon: Focus,
@@ -83,7 +122,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "basis",
-    number: "1.4",
+    number: "1.7",
     title: "Basis and coordinates: a new language for the same point",
     short: "Basis coordinates",
     icon: VectorSquare,
@@ -95,7 +134,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "transform",
-    number: "1.5",
+    number: "1.8",
     title: "Matrices as space-transforming machines",
     short: "Transformations",
     icon: Grid3X3,
@@ -107,7 +146,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "multiply",
-    number: "1.6",
+    number: "1.9",
     title: "Matrix multiplication and composition",
     short: "Matrix multiplication",
     icon: Network,
@@ -119,7 +158,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "determinant",
-    number: "1.7",
+    number: "1.10",
     title: "Determinant, inverse and information loss",
     short: "Determinant & inverse",
     icon: LockKeyhole,
@@ -131,7 +170,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "systems",
-    number: "1.8",
+    number: "1.11",
     title: "Linear systems: where constraints meet",
     short: "Linear systems",
     icon: Equal,
@@ -143,7 +182,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "rank",
-    number: "1.9",
+    number: "1.12",
     title: "Rank, column space and null space",
     short: "Rank & subspaces",
     icon: Layers3,
@@ -155,7 +194,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "orthogonal",
-    number: "1.10",
+    number: "1.13",
     title: "Gram–Schmidt: build clean perpendicular directions",
     short: "Orthogonalisation",
     icon: Target,
@@ -167,7 +206,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "conditioning",
-    number: "1.11",
+    number: "1.14",
     title: "Conditioning: when tiny input noise becomes a large error",
     short: "Numerical stability",
     icon: Gauge,
@@ -179,7 +218,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "eigen",
-    number: "1.12",
+    number: "1.15",
     title: "Eigenvectors: directions that do not turn",
     short: "Eigenvectors",
     icon: Gauge,
@@ -191,7 +230,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "least-squares",
-    number: "1.13",
+    number: "1.16",
     title: "Least squares and the best imperfect answer",
     short: "Least squares",
     icon: LineChart,
@@ -203,7 +242,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "gradient",
-    number: "1.14",
+    number: "1.17",
     title: "Gradient descent: walk downhill to the best line",
     short: "Gradient descent",
     icon: LineChart,
@@ -215,7 +254,7 @@ const chapters: Chapter[] = [
   },
   {
     id: "ml-bridge",
-    number: "1.15",
+    number: "1.18",
     title: "The bridge to machine learning",
     short: "Matrix regression & layers",
     icon: BrainCircuit,
@@ -229,6 +268,9 @@ const chapters: Chapter[] = [
 
 const missions: Record<string, string[]> = {
   vectors: ["Make v₁ have length exactly 5.", "Create two perpendicular vectors (dot product = 0).", "Make v₁+v₂ equal [3,3]."],
+  "vector-addition": ["Make u+v equal exactly [4,3].", "Find two different pairs of u,v that both sum to [5,0].", "Confirm u+v equals v+u by swapping the sliders."],
+  "vector-subtraction": ["Make the distance ‖u−v‖ exactly 5.", "Move u and v so they become equal — confirm the distance drops to 0.", "Swap u and v and confirm u−v flips sign but keeps the same length."],
+  "cross-product": ["Make a and b both lie flat in the xy-plane and confirm a×b points purely along z.", "Make a and b parallel and confirm a×b becomes the zero vector.", "Swap a and b and confirm a×b flips direction (anticommutativity)."],
   span: ["Create two independent vectors with determinant 1.", "Collapse the parallelogram by making the vectors parallel.", "Use c₁ and c₂ to reach the point [3,2]."],
   dot: ["Project u=[3,2] onto the horizontal axis.", "Choose u and v so the projection equals u.", "Make the remainder·v equal zero and explain why."],
   basis: ["Express [4,2] using basis [1,1] and [1,−1].", "Change the basis without moving the target point.", "Make the basis singular and explain why coordinates stop being unique."],
@@ -246,7 +288,10 @@ const missions: Record<string, string[]> = {
 };
 
 const pythonByChapter: Record<string, { code: string; output: string }> = {
-  vectors: { code: "v1 = np.array([2, 1])\nv2 = np.array([1, 2])\nprint(v1 + v2)\nprint(v1 @ v2)", output: "[3 3]\n4" },
+  vectors: { code: "v = np.array([3, 4])\nprint(np.linalg.norm(v))\nprint(v / np.linalg.norm(v))", output: "5.0\n[0.6 0.8]" },
+  "vector-addition": { code: "u = np.array([3, 1])\nv = np.array([1, 2])\nprint(u + v)\nprint(np.array_equal(u + v, v + u))", output: "[4 3]\nTrue" },
+  "vector-subtraction": { code: "a = np.array([72, 3])\nb = np.array([65, 5])\ndiff = a - b\nprint(diff)\nprint(np.linalg.norm(diff))", output: "[7 -2]\n7.280109889280518" },
+  "cross-product": { code: "a = np.array([1, 0, 0])\nb = np.array([0, 1, 0])\nc = np.cross(a, b)\nprint(c)\nprint(np.dot(c, a), np.dot(c, b))", output: "[0 0 1]\n0 0" },
   span: { code: "V = np.column_stack(([2, 1], [1, 2]))\nprint(np.linalg.det(V))\nprint(np.linalg.matrix_rank(V))", output: "3.0\n2" },
   dot: { code: "u = np.array([3., 2.])\nv = np.array([2., 0.])\nprojection = (u @ v) / (v @ v) * v\nprint(projection)", output: "[3. 0.]" },
   basis: { code: "B = np.array([[1, 1], [1, -1]])\nx = np.array([4, 2])\ncoordinates = np.linalg.solve(B, x)\nprint(coordinates)", output: "[3. 1.]" },
@@ -293,15 +338,50 @@ function Plane({ children, label = "Interactive coordinate plane" }: { children:
   </svg>;
 }
 
-function VectorLab({ mode }: { mode: "vectors" | "span" }) {
+function VectorLab({ mode }: { mode: "add" | "span" }) {
   const [ax,setAx]=useState(2),[ay,setAy]=useState(1),[bx,setBx]=useState(1),[by,setBy]=useState(2),[c1,setC1]=useState(1),[c2,setC2]=useState(1);
   const det=ax*by-ay*bx, dot=ax*bx+ay*by, magA=Math.hypot(ax,ay), magB=Math.hypot(bx,by);
   const angle=magA&&magB?Math.acos(clamp(dot/(magA*magB),-1,1))*180/Math.PI:0;
   const tx=c1*ax+c2*bx,ty=c1*ay+c2*by;
-  return <LabShell title={mode==="vectors"?"Build, add and compare two vectors":"Can these two vectors reach the plane?"} goal={mode==="vectors"?"Change components and connect the arrows to the numbers.":"Make the vectors parallel, then watch 2D reach collapse to one line."}>
-    <div className="u1-lab-grid"><div className="u1-controls"><div className="u1-control-pair"><NumberBox label="v₁.x" value={ax} onChange={setAx}/><NumberBox label="v₁.y" value={ay} onChange={setAy}/><NumberBox label="v₂.x" value={bx} onChange={setBx}/><NumberBox label="v₂.y" value={by} onChange={setBy}/></div>{mode==="span"&&<><MiniRange label="coefficient c₁" value={c1} min={-2} max={2} step={.5} onChange={setC1}/><MiniRange label="coefficient c₂" value={c2} min={-2} max={2} step={.5} onChange={setC2}/><button className="u1-preset" onClick={()=>{setBx(ax*2);setBy(ay*2)}}>Make v₂ parallel to v₁</button></>}<div className="u1-stats">{mode==="vectors"?<><Stat label="‖v₁‖" value={f(magA)}/><Stat label="v₁·v₂" value={f(dot)}/><Stat label="Angle" value={`${f(angle,1)}°`}/><Stat label="v₁+v₂" value={`[${f(ax+bx)}, ${f(ay+by)}]`}/></>:<><Stat label="det([v₁ v₂])" value={f(det)} good={Math.abs(det)>.001}/><Stat label="Status" value={Math.abs(det)>.001?"Independent":"Dependent"}/><Stat label="Combination" value={`[${f(tx)}, ${f(ty)}]`}/></>}</div></div>
-      <div className="u1-visual"><Plane>{mode==="span"&&<polygon points={`${sx(0)},${sy(0)} ${sx(ax*c1)},${sy(ay*c1)} ${sx(tx)},${sy(ty)} ${sx(bx*c2)},${sy(by*c2)}`} className="u1-span-area"/>}<line x1={sx(0)} y1={sy(0)} x2={sx(ax)} y2={sy(ay)} className="u1-v1" markerEnd="url(#arrow-purple)"/><line x1={sx(0)} y1={sy(0)} x2={sx(bx)} y2={sy(by)} className="u1-v2" markerEnd="url(#arrow-coral)"/>{mode==="vectors"?<line x1={sx(0)} y1={sy(0)} x2={sx(ax+bx)} y2={sy(ay+by)} className="u1-vsum" markerEnd="url(#arrow-green)"/>:<line x1={sx(0)} y1={sy(0)} x2={sx(tx)} y2={sy(ty)} className="u1-vsum" markerEnd="url(#arrow-green)"/>}</Plane><div className="u1-legend"><span className="v1">v₁</span><span className="v2">v₂</span><span className="sum">{mode==="vectors"?"v₁+v₂":"c₁v₁+c₂v₂"}</span></div></div></div>
-    <div className="u1-observation"><Eye/><p><b>Observe:</b> {mode==="vectors"?`the dot product is ${f(dot)}. ${Math.abs(dot)<.001?"The vectors are perpendicular.":dot>0?"They point generally in the same direction.":"They point generally in opposite directions."}`:Math.abs(det)<.001?"The parallelogram has zero area. One vector adds no new direction, so rank falls to 1.":`The parallelogram area is |${f(det)}|. Two independent directions span the entire 2D plane.`}</p></div>
+  return <LabShell title={mode==="add"?"Build, add and compare two vectors":"Can these two vectors reach the plane?"} goal={mode==="add"?"Change components and connect the arrows to the numbers.":"Make the vectors parallel, then watch 2D reach collapse to one line."}>
+    <div className="u1-lab-grid"><div className="u1-controls"><div className="u1-control-pair"><NumberBox label="v₁.x" value={ax} onChange={setAx}/><NumberBox label="v₁.y" value={ay} onChange={setAy}/><NumberBox label="v₂.x" value={bx} onChange={setBx}/><NumberBox label="v₂.y" value={by} onChange={setBy}/></div>{mode==="span"&&<><MiniRange label="coefficient c₁" value={c1} min={-2} max={2} step={.5} onChange={setC1}/><MiniRange label="coefficient c₂" value={c2} min={-2} max={2} step={.5} onChange={setC2}/><button className="u1-preset" onClick={()=>{setBx(ax*2);setBy(ay*2)}}>Make v₂ parallel to v₁</button></>}<div className="u1-stats">{mode==="add"?<><Stat label="‖v₁‖" value={f(magA)}/><Stat label="v₁·v₂" value={f(dot)}/><Stat label="Angle between v₁ and v₂" value={`${f(angle,1)}°`}/><Stat label="v₁+v₂" value={`[${f(ax+bx)}, ${f(ay+by)}]`}/></>:<><Stat label="det([v₁ v₂])" value={f(det)} good={Math.abs(det)>.001}/><Stat label="Status" value={Math.abs(det)>.001?"Independent":"Dependent"}/><Stat label="Combination" value={`[${f(tx)}, ${f(ty)}]`}/></>}</div></div>
+      <div className="u1-visual"><Plane>{mode==="span"&&<polygon points={`${sx(0)},${sy(0)} ${sx(ax*c1)},${sy(ay*c1)} ${sx(tx)},${sy(ty)} ${sx(bx*c2)},${sy(by*c2)}`} className="u1-span-area"/>}<line x1={sx(0)} y1={sy(0)} x2={sx(ax)} y2={sy(ay)} className="u1-v1" markerEnd="url(#arrow-purple)"/><line x1={sx(0)} y1={sy(0)} x2={sx(bx)} y2={sy(by)} className="u1-v2" markerEnd="url(#arrow-coral)"/>{mode==="add"?<line x1={sx(0)} y1={sy(0)} x2={sx(ax+bx)} y2={sy(ay+by)} className="u1-vsum" markerEnd="url(#arrow-green)"/>:<line x1={sx(0)} y1={sy(0)} x2={sx(tx)} y2={sy(ty)} className="u1-vsum" markerEnd="url(#arrow-green)"/>}</Plane><div className="u1-legend"><span className="v1">v₁</span><span className="v2">v₂</span><span className="sum">{mode==="add"?"v₁+v₂":"c₁v₁+c₂v₂"}</span></div></div></div>
+    <div className="u1-observation"><Eye/><p><b>Observe:</b> {mode==="add"?`the dot product is ${f(dot)}. ${Math.abs(dot)<.001?"The vectors are perpendicular.":dot>0?"They point generally in the same direction.":"They point generally in opposite directions."}`:Math.abs(det)<.001?"The parallelogram has zero area. One vector adds no new direction, so rank falls to 1.":`The parallelogram area is |${f(det)}|. Two independent directions span the entire 2D plane.`}</p></div>
+  </LabShell>;
+}
+
+function SingleVectorLab(){
+  const [x,setX]=useState(3),[y,setY]=useState(4);
+  const mag=Math.hypot(x,y), ux=mag?x/mag:0, uy=mag?y/mag:0, angle=Math.atan2(y,x)*180/Math.PI;
+  return <LabShell title="Meet a vector: components, length and direction" goal="Change the components and watch the magnitude, unit vector and angle update together.">
+    <div className="u1-lab-grid"><div className="u1-controls"><div className="u1-control-pair"><NumberBox label="v.x" value={x} onChange={setX}/><NumberBox label="v.y" value={y} onChange={setY}/></div><div className="u1-stats"><Stat label="‖v‖ (magnitude)" value={f(mag)}/><Stat label="Unit vector v̂" value={`[${f(ux,2)}, ${f(uy,2)}]`} good/><Stat label="Angle from x-axis" value={`${f(angle,1)}°`}/></div></div>
+      <div className="u1-visual"><Plane><line x1={sx(0)} y1={sy(0)} x2={sx(x)} y2={sy(y)} className="u1-v1" markerEnd="url(#arrow-purple)"/><line x1={sx(0)} y1={sy(0)} x2={sx(ux*1.4)} y2={sy(uy*1.4)} className="u1-vsum" markerEnd="url(#arrow-green)"/></Plane><div className="u1-legend"><span className="v1">v</span><span className="sum">unit vector v̂</span></div></div></div>
+    <div className="u1-observation"><Eye/><p><b>Observe:</b> the unit vector always has length 1 and points in the exact same direction as v — dividing by the magnitude "normalises" it.</p></div>
+  </LabShell>;
+}
+
+function SubtractLab(){
+  const [ax,setAx]=useState(5),[ay,setAy]=useState(4),[bx,setBx]=useState(1),[by,setBy]=useState(1);
+  const dx=ax-bx, dy=ay-by, dist=Math.hypot(dx,dy);
+  return <LabShell title="Find the gap between two points" goal="Move u and v — the dashed connector from v's tip to u's tip is exactly u−v, and its length is the distance between them.">
+    <div className="u1-lab-grid"><div className="u1-controls"><div className="u1-control-pair"><NumberBox label="u.x" value={ax} onChange={setAx}/><NumberBox label="u.y" value={ay} onChange={setAy}/><NumberBox label="v.x" value={bx} onChange={setBx}/><NumberBox label="v.y" value={by} onChange={setBy}/></div><button className="u1-preset" onClick={()=>{setBx(ax);setBy(ay)}}>Make v equal u</button><div className="u1-stats"><Stat label="u − v" value={`[${f(dx)}, ${f(dy)}]`}/><Stat label="distance ‖u−v‖" value={f(dist)} good={dist>0}/></div></div>
+      <div className="u1-visual"><Plane><line x1={sx(0)} y1={sy(0)} x2={sx(ax)} y2={sy(ay)} className="u1-v1" markerEnd="url(#arrow-purple)"/><line x1={sx(0)} y1={sy(0)} x2={sx(bx)} y2={sy(by)} className="u1-v2" markerEnd="url(#arrow-coral)"/><line x1={sx(0)} y1={sy(0)} x2={sx(dx)} y2={sy(dy)} className="u1-vsum" markerEnd="url(#arrow-green)"/><line x1={sx(bx)} y1={sy(by)} x2={sx(ax)} y2={sy(ay)} className="u1-residual-line"/></Plane><div className="u1-legend"><span className="v1">u</span><span className="v2">v</span><span className="sum">u−v</span></div></div></div>
+    <div className="u1-observation"><Minus/><p><b>Observe:</b> {dist<.01?"u and v are now the same point — the distance between them has dropped to 0.":`the dashed connector from v to u has the same length and direction as the green u−v vector: both equal ${f(dist)}.`}</p></div>
+  </LabShell>;
+}
+
+function iso(x:number,y:number,z:number){const a=Math.PI/6;return {x:x-z*Math.cos(a)*0.6, y:y-z*Math.sin(a)*0.6};}
+function CrossProductLab(){
+  const [ax,setAx]=useState(1),[ay,setAy]=useState(0),[az,setAz]=useState(0),[bx,setBx]=useState(0),[by,setBy]=useState(1),[bz,setBz]=useState(0);
+  const cx=ay*bz-az*by, cy=az*bx-ax*bz, cz=ax*by-ay*bx;
+  const magA=Math.hypot(ax,ay,az), magB=Math.hypot(bx,by,bz), magC=Math.hypot(cx,cy,cz);
+  const checkA=cx*ax+cy*ay+cz*az, checkB=cx*bx+cy*by+cz*bz;
+  const pA=iso(ax,ay,az), pB=iso(bx,by,bz), pC=iso(cx*0.9,cy*0.9,cz*0.9), pZ=iso(0,0,3);
+  return <LabShell title="Build a vector perpendicular to two others" goal="Edit two 3D vectors a and b — the green vector is a×b, always perpendicular to both (check the dot products below).">
+    <div className="u1-presets"><button onClick={()=>{setAx(1);setAy(0);setAz(0);setBx(0);setBy(1);setBz(0)}}>x̂ × ŷ = ẑ</button><button onClick={()=>{setBx(ax*2);setBy(ay*2);setBz(az*2)}}>Make a, b parallel</button><button onClick={()=>{const t=ax;setAx(bx);setBx(t);const t2=ay;setAy(by);setBy(t2);const t3=az;setAz(bz);setBz(t3)}}>Swap a and b</button></div>
+    <div className="u1-lab-grid"><div className="u1-controls"><div className="u1-control-pair"><NumberBox label="a.x" value={ax} onChange={setAx}/><NumberBox label="a.y" value={ay} onChange={setAy}/><NumberBox label="a.z" value={az} onChange={setAz}/><NumberBox label="b.x" value={bx} onChange={setBx}/><NumberBox label="b.y" value={by} onChange={setBy}/><NumberBox label="b.z" value={bz} onChange={setBz}/></div><div className="u1-equation-stack"><span>a×b = [{f(cx)}, {f(cy)}, {f(cz)}]</span></div><div className="u1-stats"><Stat label="‖a×b‖" value={f(magC)} note={magC>0?"area of the parallelogram":"a and b are parallel"}/><Stat label="(a×b)·a" value={f(checkA)} good={Math.abs(checkA)<.001}/><Stat label="(a×b)·b" value={f(checkB)} good={Math.abs(checkB)<.001}/></div></div>
+      <div className="u1-visual"><svg className="u1-plane" viewBox="0 0 420 380" role="img" aria-label="3D cross product, isometric view"><line x1={sx(0)} y1={sy(0)} x2={sx(pZ.x)} y2={sy(pZ.y)} className="u1-grid"/><line x1={sx(-4)} y1={sy(0)} x2={sx(4)} y2={sy(0)} className="u1-grid"/><line x1={sx(0)} y1={sy(-4)} x2={sx(0)} y2={sy(4)} className="u1-grid"/><defs><marker id="arrow-purple2" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L6,3.5 z" fill="#6d4aff"/></marker><marker id="arrow-coral2" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L6,3.5 z" fill="#ec5d67"/></marker><marker id="arrow-green2" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L6,3.5 z" fill="#0e9f6e"/></marker></defs><line x1={sx(0)} y1={sy(0)} x2={sx(pA.x)} y2={sy(pA.y)} className="u1-v1" markerEnd="url(#arrow-purple2)"/><line x1={sx(0)} y1={sy(0)} x2={sx(pB.x)} y2={sy(pB.y)} className="u1-v2" markerEnd="url(#arrow-coral2)"/><line x1={sx(0)} y1={sy(0)} x2={sx(pC.x)} y2={sy(pC.y)} className="u1-vsum" markerEnd="url(#arrow-green2)"/></svg><div className="u1-legend"><span className="v1">a</span><span className="v2">b</span><span className="sum">a×b</span></div></div></div>
+    <div className="u1-observation"><Axis3D/><p><b>Perpendicularity check:</b> {Math.abs(checkA)<.001&&Math.abs(checkB)<.001?"both dot products are 0, confirming a×b is perpendicular to both a and b.":"a×b has collapsed toward zero because a and b are parallel — there is no unique perpendicular direction left to find."}</p></div>
   </LabShell>;
 }
 
@@ -383,7 +463,11 @@ function MLBridgeLab(){
 }
 
 function ChapterLab({ id }: { id: string }){
-  if(id==="vectors"||id==="span") return <VectorLab mode={id}/>;
+  if(id==="vectors") return <SingleVectorLab/>;
+  if(id==="vector-addition") return <VectorLab mode="add"/>;
+  if(id==="vector-subtraction") return <SubtractLab/>;
+  if(id==="cross-product") return <CrossProductLab/>;
+  if(id==="span") return <VectorLab mode="span"/>;
   if(id==="dot") return <ProjectionLab/>;
   if(id==="basis") return <BasisLab/>;
   if(id==="transform") return <TransformLab/>;
@@ -420,6 +504,10 @@ const misconceptions=[
   {s:"An eigenvector must keep exactly the same length.",truth:false,why:"It keeps its direction; its length is scaled by the eigenvalue λ."},
   {s:"A larger gradient-descent learning rate is always better.",truth:false,why:"A step that is too large may overshoot the minimum or diverge."},
   {s:"Rows of a design matrix normally represent observations.",truth:true,why:"Each row is one case and each column is one input feature (plus an optional intercept column)."},
+  {s:"Vector addition is commutative: u+v always equals v+u.",truth:true,why:"Adding components one-by-one gives the same result regardless of order."},
+  {s:"Vector subtraction is commutative: u−v always equals v−u.",truth:false,why:"u−v and v−u point in exactly opposite directions — subtraction is not commutative."},
+  {s:"The cross product a×b is commutative: a×b equals b×a.",truth:false,why:"The cross product is anticommutative: a×b = −(b×a), so swapping the order flips its direction."},
+  {s:"The cross product is only defined for 3D vectors.",truth:true,why:"The standard cross product produces a perpendicular vector, which only has a well-defined single direction in 3D (2D has a scalar analogue, but not a true cross product)."},
 ];
 
 function MisconceptionLab(){
@@ -446,6 +534,10 @@ const quiz=[
   {q:"Least squares minimises…",o:["the number of points","sum of squared residuals","the slope only"],a:1},
   {q:"Gradient descent updates parameters using…",o:["A direction that reduces loss","Random rank","Only the determinant"],a:0},
   {q:"In ŷ=Xβ, columns of X usually represent…",o:["observations","features","different models"],a:1},
+  {q:"Geometrically, u+v is found by…",o:["Placing v's tail at u's tip and connecting start to end","Rotating u by v's length","Finding the midpoint of u and v"],a:0},
+  {q:"The distance between two points u and v equals…",o:["‖u−v‖","u·v","u+v"],a:0},
+  {q:"The cross product a×b is a vector that is…",o:["Perpendicular to both a and b","Parallel to a","Always the zero vector"],a:0},
+  {q:"Which is true about a×b and b×a?",o:["a×b = −(b×a)","a×b = b×a always","They are unrelated"],a:0},
 ];
 
 function MasteryQuiz(){
@@ -466,5 +558,5 @@ export default function Unit1Studio(){
   const mark=()=>{if(!complete.includes(active))setComplete(v=>[...v,active]);if(next){setActive(next.id);setTimeout(()=>document.getElementById("unit1-studio")?.scrollIntoView({behavior:"smooth"}),50)}};
   const learningPath=useMemo(()=>chapters.map(c=>({c,done:complete.includes(c.id)})),[complete]);
   const toggleMission=(key:string)=>setMissionDone(v=>v.includes(key)?v.filter(x=>x!==key):[...v,key]);
-  return <div className="u1-wrap" id="unit1-studio"><section className="u1-intro"><div><span className="u1-eyebrow"><Sparkles/> UNIT 1 · COMPLETE LEARNING STUDIO</span><h2>Linear algebra you can <em>see, change and explain</em></h2><p>Move from one vector to full matrix regression through fifteen connected topics. Every topic follows meaning → tiny numbers → visual experiment → ML use.</p><div className="u1-objectives"><span><CheckCircle2/>Interpret vectors and matrices</span><span><CheckCircle2/>Diagnose rank and instability</span><span><CheckCircle2/>Solve, fit and optimise models</span><span><CheckCircle2/>Connect algebra to AI</span></div></div><div className="u1-progress-ring" style={{"--p":`${pct*3.6}deg`} as React.CSSProperties}><div><strong>{pct}%</strong><span>{complete.length}/{chapters.length} topics</span></div></div></section><section className="u1-path"><div className="u1-path-head"><div><p>YOUR LEARNING PATH</p><h2>Choose a topic</h2></div><span>Progress saves automatically</span></div><div className="u1-topic-grid">{learningPath.map(({c,done})=>{const I=c.icon;return <button key={c.id} className={active===c.id?"active":""} onClick={()=>{setActive(c.id);document.getElementById("unit1-concept")?.scrollIntoView({behavior:"smooth"})}}><span><I/></span><div><small>{c.number}</small><b>{c.short}</b></div>{done?<i><Check/></i>:<ChevronDown/>}</button>})}</div></section><div id="unit1-concept"><ConceptCard chapter={chapter}/><ChapterLab id={chapter.id}/><MissionPanel chapter={chapter} completed={missionDone} toggle={toggleMission}/><PythonPanel chapter={chapter}/><section className="u1-topic-finish"><div><CheckCircle2/><span><b>Finished experimenting with {chapter.number}?</b>Mark it understood and continue. You can revisit it at any time.</span></div><button onClick={mark}>{complete.includes(active)?"Continue":`Mark ${chapter.number} understood`}<ArrowRight/></button></section></div><section className="u1-map"><div><Network/><span><b>The unit in one sentence</b>Vectors define directions → bases describe them → matrices transform and compose them → rank and conditioning test information quality → least squares and gradient descent learn predictions.</span></div></section><MisconceptionLab/><MasteryQuiz/></div>;
+  return <div className="u1-wrap" id="unit1-studio"><section className="u1-intro"><div><span className="u1-eyebrow"><Sparkles/> UNIT 1 · COMPLETE LEARNING STUDIO</span><h2>Linear algebra you can <em>see, change and explain</em></h2><p>Move from one vector to full matrix regression through eighteen connected topics. Every topic follows meaning → tiny numbers → visual experiment → ML use.</p><div className="u1-objectives"><span><CheckCircle2/>Interpret vectors and matrices</span><span><CheckCircle2/>Diagnose rank and instability</span><span><CheckCircle2/>Solve, fit and optimise models</span><span><CheckCircle2/>Connect algebra to AI</span></div></div><div className="u1-progress-ring" style={{"--p":`${pct*3.6}deg`} as React.CSSProperties}><div><strong>{pct}%</strong><span>{complete.length}/{chapters.length} topics</span></div></div></section><section className="u1-path"><div className="u1-path-head"><div><p>YOUR LEARNING PATH</p><h2>Choose a topic</h2></div><span>Progress saves automatically</span></div><div className="u1-topic-grid">{learningPath.map(({c,done})=>{const I=c.icon;return <button key={c.id} className={active===c.id?"active":""} onClick={()=>{setActive(c.id);document.getElementById("unit1-concept")?.scrollIntoView({behavior:"smooth"})}}><span><I/></span><div><small>{c.number}</small><b>{c.short}</b></div>{done?<i><Check/></i>:<ChevronDown/>}</button>})}</div></section><div id="unit1-concept"><ConceptCard chapter={chapter}/><ChapterLab id={chapter.id}/><MissionPanel chapter={chapter} completed={missionDone} toggle={toggleMission}/><PythonPanel chapter={chapter}/><section className="u1-topic-finish"><div><CheckCircle2/><span><b>Finished experimenting with {chapter.number}?</b>Mark it understood and continue. You can revisit it at any time.</span></div><button onClick={mark}>{complete.includes(active)?"Continue":`Mark ${chapter.number} understood`}<ArrowRight/></button></section></div><section className="u1-map"><div><Network/><span><b>The unit in one sentence</b>Vectors define directions → bases describe them → matrices transform and compose them → rank and conditioning test information quality → least squares and gradient descent learn predictions.</span></div></section><MisconceptionLab/><MasteryQuiz/></div>;
 }

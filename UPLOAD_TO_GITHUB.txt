@@ -1,6 +1,6 @@
 DS AI WEB TUTOR — UPDATE INSTRUCTIONS
 
-This version contains the expanded 15-topic Unit 1 learning studio.
+This version contains the expanded 18-topic Unit 1 and 8-topic Unit 2 learning studios (vector addition/subtraction/cross product, and the multiplication rule/total probability, added with ML links).
 
 1. Extract this ZIP on your computer.
 2. Open: https://github.com/MohamedMEC/DS
