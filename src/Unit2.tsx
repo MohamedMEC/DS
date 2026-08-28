@@ -71,8 +71,8 @@ const chapters: Chapter[] = [
 
 const missions: Record<string, string[]> = {
   "sample-space": ["Set the target sum to 7 and read off how many of the 36 outcomes match.", "Find a target sum with only 1 matching outcome.", "Find the target sum with the most matching outcomes and explain why it's the most common."],
-  "prob-rules": ["Pick a target sum and confirm P(A)+P(Aᶜ)=1.", "Turn on the 'at least one 6' event and watch the overlap cells highlight.", "Verify the union probability equals P(A)+P(B)−P(A∩B) using the live numbers."],
-  conditional: ["Set die 1 to a fixed value and watch the conditional probability change.", "Make P(A|B) larger than the unconditional P(A) and explain why.", "Make P(A|B) equal to P(A) — what does that tell you about A and B?"],
+  "prob-rules": ["Pick a target sum with event B off and confirm P(A)+P(Aᶜ)=1.", "Turn on the 'at least one 6' event and watch the overlap cells highlight.", "Verify the union probability equals P(A)+P(B)−P(A∩B) using the live numbers."],
+  conditional: ["Increase the ¬A∩B count and watch P(A|B) change.", "Make P(A|B) larger than the unconditional P(A) and explain why.", "Make P(A|B) equal to P(A) — what does that tell you about A and B?"],
   independence: ["Enter contingency counts where P(A∩B) exactly equals P(A)×P(B).", "Change one count so the events become dependent.", "Make A and B almost perfectly dependent (large gap between P(A∩B) and P(A)P(B))."],
   "multiplication-rule": ["Compute P(1st draw matches) then P(2nd draw matches | 1st matched) and multiply them.", "Switch to 3 draws and watch the chain lengthen and the product shrink further.", "Compare the chained product against the independent (with-replacement) product."],
   "total-probability": ["Adjust each pathway's share and confirm the three shares sum to exactly 1.", "Raise one pathway's rate and check the overall rate shifts by exactly that pathway's weight.", "Make all three rates equal and confirm the overall rate matches them regardless of the shares."],
@@ -106,7 +106,7 @@ function DiceGridLab({ mode }: { mode: "single" | "rules" }) {
       <div className="u1-stats">
         <Stat label="P(A) = sum equals target" value={f(pA, 3)} note={`${countA}/36`} />
         {mode === "rules" && useB && <><Stat label="P(B) = at least one 6" value={f(pB, 3)} note={`${countB}/36`} /><Stat label="P(A∩B)" value={f(pAB, 3)} note={`${countBoth}/36`} /><Stat label="P(A∪B)" value={f(pUnion, 3)} good note={`${countUnion}/36`} /></>}
-        {mode === "single" && <Stat label="P(Aᶜ) = complement" value={f(1 - pA, 3)} note={`${36 - countA}/36`} />}
+        {(mode === "single" || !useB) && <Stat label="P(Aᶜ) = complement" value={f(1 - pA, 3)} note={`${36 - countA}/36`} />}
       </div>
     </div>
       <div className="u1-visual"><svg viewBox="0 0 420 320" width="100%" height="320" role="img" aria-label={`6 by 6 grid of dice outcomes with event A (sum equals ${target}) highlighted${mode === "rules" && useB ? ", event B (at least one 6) highlighted, and their overlap marked" : ""}`}>
@@ -125,6 +125,8 @@ function DiceGridLab({ mode }: { mode: "single" | "rules" }) {
   </LabShell>;
 }
 
+const nonNegInt = (v: number) => Math.max(0, Math.round(v));
+
 function ConditionalLab({ independenceFocus = false }: { independenceFocus?: boolean }) {
   const [a, setA] = useState(30), [b, setB] = useState(20), [c, setC] = useState(10), [d, setD] = useState(40);
   const N = Math.max(1, a + b + c + d), pA = (a + b) / N, pB = (a + c) / N, pAB = a / N, pAgivenB = (a + c) ? a / (a + c) : 0, pBgivenA = (a + b) ? a / (a + b) : 0;
@@ -133,7 +135,7 @@ function ConditionalLab({ independenceFocus = false }: { independenceFocus?: boo
   const cats: string[] = []; for (let i = 0; i < filled.a; i++) cats.push("a"); for (let i = 0; i < filled.b; i++) cats.push("b"); for (let i = 0; i < filled.c; i++) cats.push("c"); while (cats.length < squares) cats.push("d");
   return <LabShell title={independenceFocus ? "Test whether two events are independent" : "Edit a contingency table and read conditional probabilities"} goal={independenceFocus ? "Compare the actual overlap P(A∩B) with the independence prediction P(A)×P(B)." : "A and B are two events over the same N cases — change the counts and watch every probability update."}>
     <div className="u1-lab-grid"><div className="u1-controls">
-      <div className="u1-control-pair"><NumberBox label="A ∩ B" value={a} onChange={setA} step="1" /><NumberBox label="A ∩ ¬B" value={b} onChange={setB} step="1" /><NumberBox label="¬A ∩ B" value={c} onChange={setC} step="1" /><NumberBox label="¬A ∩ ¬B" value={d} onChange={setD} step="1" /></div>
+      <div className="u1-control-pair"><NumberBox label="A ∩ B" value={a} onChange={v => setA(nonNegInt(v))} step="1" /><NumberBox label="A ∩ ¬B" value={b} onChange={v => setB(nonNegInt(v))} step="1" /><NumberBox label="¬A ∩ B" value={c} onChange={v => setC(nonNegInt(v))} step="1" /><NumberBox label="¬A ∩ ¬B" value={d} onChange={v => setD(nonNegInt(v))} step="1" /></div>
       <div className="u1-stats"><Stat label="P(A)" value={f(pA, 3)} /><Stat label="P(B)" value={f(pB, 3)} /><Stat label="P(A∩B)" value={f(pAB, 3)} /><Stat label="P(A|B)" value={f(pAgivenB, 3)} good={!independenceFocus} /><Stat label="P(B|A)" value={f(pBgivenA, 3)} />{independenceFocus && <Stat label="P(A)×P(B)" value={f(expected, 3)} />}</div>
       {independenceFocus && <div className={`u1-observation ${independent ? "" : "warn"}`}><Shuffle /><p><b>{independent ? "Independent:" : "Dependent:"}</b> P(A∩B)={f(pAB, 3)} {independent ? "matches" : "differs from"} P(A)×P(B)={f(expected, 3)} (gap {f(gap, 3)}).</p></div>}
     </div>

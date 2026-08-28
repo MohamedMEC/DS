@@ -41,7 +41,7 @@ export function comb(n: number, k: number) { if (k < 0 || k > n) return 0; k = M
 export function binomialPMF(n: number, p: number) { const k: number[] = [], pmf: number[] = []; for (let ki = 0; ki <= n; ki++) { k.push(ki); pmf.push(comb(n, ki) * Math.pow(p, ki) * Math.pow(1 - p, n - ki)); } return { k, pmf }; }
 
 function lnFactorial(n: number) { if (n < 2) return 0; let s = 0; for (let i = 2; i <= n; i++) s += Math.log(i); return s; }
-export function poissonPMF(lambda: number, kMax: number) { const k: number[] = [], pmf: number[] = []; for (let ki = 0; ki <= kMax; ki++) { k.push(ki); pmf.push(Math.exp(ki * Math.log(lambda) - lambda - lnFactorial(ki))); } return { k, pmf }; }
+export function poissonPMF(lambda: number, kMax: number) { const k: number[] = [], pmf: number[] = []; for (let ki = 0; ki <= kMax; ki++) { k.push(ki); pmf.push(lambda === 0 ? (ki === 0 ? 1 : 0) : Math.exp(ki * Math.log(lambda) - lambda - lnFactorial(ki))); } return { k, pmf }; }
 
 export function normalPDF(x: number, mu: number, sigma: number) { return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2)); }
 
@@ -113,8 +113,11 @@ export function ttestInd(a: number[], b: number[]) {
   const va = variance(a, 1), vb = variance(b, 1), df = na + nb - 2;
   const pooled = ((na - 1) * va + (nb - 1) * vb) / df;
   const se = Math.sqrt(pooled * (1 / na + 1 / nb));
-  const t = se > 0 ? (ma - mb) / se : 0;
-  const p = se > 0 ? tTwoTailedP(t, df) : 1;
+  // Zero pooled variance (e.g. every value in each group tightened to its own mean) is a real,
+  // reachable edge case in the lab — mirror fOneway's handling instead of silently forcing t=0,p=1,
+  // which would falsely read as "no difference" even when the means are clearly separated.
+  const t = se > 0 ? (ma - mb) / se : ma === mb ? 0 : ma > mb ? Infinity : -Infinity;
+  const p = se > 0 ? tTwoTailedP(t, df) : ma === mb ? 1 : 0;
   return { t, p, df };
 }
 /** One-way ANOVA across 2+ groups. */

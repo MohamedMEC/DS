@@ -56,7 +56,7 @@ const chapters: Chapter[] = [
 
 const missions: Record<string, string[]> = {
   "missing-data": ["Mark two values as missing, then compare Drop vs Mean-impute results.", "Impute with the median instead and see if the result changes.", "Explain in one sentence why the imputed column's spread looks smaller than the original."],
-  outliers: ["Add one extreme value and confirm both methods flag it.", "Lower the z-score threshold until a borderline point gets flagged.", "Switch to IQR and compare which points it flags versus the z-score method."],
+  outliers: ["Add one extreme value and confirm both methods flag it.", "Edit a value to create a borderline case, then lower the z-score threshold until it gets flagged.", "Switch to IQR and compare which points it flags versus the z-score method."],
   "descriptive-stats": ["Add a large outlier and watch the mean move more than the median.", "Make every value identical and observe standard deviation become 0.", "Build a dataset where mean and median are exactly equal."],
   correlation: ["Create points with r close to +1.", "Create points with r close to −1.", "Use the curved preset and notice r stays near 0 despite an obvious pattern."],
   scaling: ["Add one very large value and watch min-max compression squeeze the rest together.", "Compare a standardised value here to a z-score from the normal-distribution lab.", "Make two very differently-scaled features look comparable after standardising."],

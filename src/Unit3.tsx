@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Activity, Dices, Eye, Hash, Play, Repeat, RotateCcw, TrendingUp } from "lucide-react";
-import { Chapter, LabShell, MiniRange, Stat, StudioShell, f } from "./studio-kit";
+import { Chapter, clamp, LabShell, MiniRange, Stat, StudioShell, f } from "./studio-kit";
 import { binomialPMF, makeGaussianRng, makeRng, normalCDF, normalPDF, poissonPMF } from "./stats-kit";
 
 const chapters: Chapter[] = [
@@ -125,6 +125,11 @@ function PoissonLab() {
 
 function NormalCurveLab() {
   const [mu, setMu] = useState(70), [sigma, setSigma] = useState(10), [x, setX] = useState(85);
+  // Keep x inside [mu-4σ, mu+4σ] whenever μ or σ move — that's the slider's own bound, and
+  // without reclamping, x can end up outside the redrawn curve entirely (marker off-canvas,
+  // z-score reading a value the slider no longer shows).
+  const changeMu = (v: number) => { setMu(v); setX(prev => clamp(prev, v - 4 * sigma, v + 4 * sigma)); };
+  const changeSigma = (v: number) => { setSigma(v); setX(prev => clamp(prev, mu - 4 * v, mu + 4 * v)); };
   const z = sigma ? (x - mu) / sigma : 0;
   const px = (v: number) => 40 + ((v - (mu - 4 * sigma)) / (8 * sigma)) * 360, py = (d: number, maxD: number) => 210 - (d / maxD) * 180;
   const xs = Array.from({ length: 161 }, (_, i) => mu - 4 * sigma + i * (8 * sigma / 160));
@@ -132,8 +137,8 @@ function NormalCurveLab() {
   const preset = (kSD: number) => { const area = normalCDF(kSD) - normalCDF(-kSD); return area; };
   return <LabShell title="Standardise any value with a z-score" goal="Move μ, σ and a target value x. The z-score tells you how many standard deviations x sits from the mean.">
     <div className="u1-lab-grid"><div className="u1-controls">
-      <MiniRange label="mean μ" value={mu} min={0} max={100} step={1} onChange={setMu} />
-      <MiniRange label="standard deviation σ" value={sigma} min={1} max={25} step={0.5} onChange={setSigma} />
+      <MiniRange label="mean μ" value={mu} min={0} max={100} step={1} onChange={changeMu} />
+      <MiniRange label="standard deviation σ" value={sigma} min={1} max={25} step={0.5} onChange={changeSigma} />
       <MiniRange label="value x" value={x} min={mu - 4 * sigma} max={mu + 4 * sigma} step={0.5} onChange={setX} />
       <div className="u1-equation-stack"><span>z = (x−μ)/σ = ({f(x)}−{f(mu)})/{f(sigma)} = <b>{f(z)}</b></span></div>
       <div className="u1-stats"><Stat label="Within ±1σ" value={`${f(preset(1) * 100, 1)}%`} note="empirical rule ≈68%" /><Stat label="Within ±2σ" value={`${f(preset(2) * 100, 1)}%`} note="empirical rule ≈95%" /><Stat label="Within ±3σ" value={`${f(preset(3) * 100, 1)}%`} note="empirical rule ≈99.7%" /></div>
@@ -145,15 +150,21 @@ function NormalCurveLab() {
 
 function CLTLab() {
   const [n, setN] = useState(1), [draws, setDraws] = useState<number[]>([]);
+  // totalDrawn is the true cumulative count. `draws` is only a capped display buffer for the
+  // histogram — it must never be used to report how many sample means have been drawn, since
+  // slicing it to the last 2000 points would otherwise freeze the counter (same bug class as
+  // LLNLab's totalFlips/totalHeads split below).
+  const [totalDrawn, setTotalDrawn] = useState(0);
   const rng = useMemo(() => makeRng(7), []);
   const drawMeans = (count: number) => {
     const next: number[] = [];
     for (let d = 0; d < count; d++) { let s = 0; for (let i = 0; i < n; i++) s += -Math.log(1 - rng()); next.push(s / n); }
     setDraws(v => [...v, ...next].slice(-2000));
+    setTotalDrawn(t => t + count);
   };
-  const reset = () => setDraws([]);
+  const reset = () => { setDraws([]); setTotalDrawn(0); };
   // Switching n starts a new sampling distribution — mixing sample means computed at different n in one histogram would be meaningless, so clear on every change.
-  const changeN = (v: number) => { setN(v); setDraws([]); };
+  const changeN = (v: number) => { setN(v); setDraws([]); setTotalDrawn(0); };
   const meanOfMeans = draws.length ? draws.reduce((a, b) => a + b, 0) / draws.length : 0;
   const sdOfMeans = draws.length ? Math.sqrt(draws.reduce((a, b) => a + (b - meanOfMeans) ** 2, 0) / draws.length) : 0;
   const maxVal = 5, bins = 24, counts = new Array(bins).fill(0);
@@ -164,7 +175,7 @@ function CLTLab() {
     <div className="u1-lab-grid"><div className="u1-controls">
       <button className="u1-preset" onClick={() => drawMeans(500)}><Play />Draw 500 sample means</button>
       <button className="u1-preset" onClick={reset}><RotateCcw />Reset</button>
-      <div className="u1-stats"><Stat label="Sample means drawn" value={`${draws.length}`} /><Stat label="Mean of sample means" value={f(meanOfMeans)} note="true mean = 1.0" /><Stat label="SD of sample means" value={f(sdOfMeans)} note={`theory ≈ ${f(1 / Math.sqrt(n))}`} /></div>
+      <div className="u1-stats"><Stat label="Sample means drawn" value={`${totalDrawn}`} /><Stat label="Mean of sample means" value={f(meanOfMeans)} note="true mean = 1.0" /><Stat label="SD of sample means" value={f(sdOfMeans)} note={`theory ≈ ${f(1 / Math.sqrt(n))}`} /></div>
     </div>
       <div className="u1-visual"><svg viewBox="0 0 420 230" width="100%" height="230" role="img" aria-label={`Histogram of ${draws.length} sample means at n=${n}, showing the shape of the sampling distribution`}><line x1="30" y1="210" x2="400" y2="210" className="axis" />{counts.map((c, i) => <rect key={i} x={38 + i * 15} y={210 - (c / maxCount) * 180} width="12" height={(c / maxCount) * 180} className="bar" />)}</svg></div></div>
     <div className="u1-observation"><TrendingUp /><p><b>{n === 1 ? "At n=1:" : "At n=" + n + ":"}</b> {n === 1 ? "the sampling distribution just is the original skewed distribution — no averaging has happened yet." : "averaging " + n + " skewed values already looks noticeably more symmetric and narrower than the raw data."}</p></div>
