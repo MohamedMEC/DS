@@ -272,10 +272,10 @@ const chapters: Chapter[] = [
     title: "Pseudoinverse projection and residual orthogonality",
     short: "Projection & orthogonality",
     icon: Sigma,
-    meaning: "Least squares (1.16) fit one line by minimising SSE. The pseudoinverse X⁺ packages that same idea into one matrix formula that works for any number of features and observations: β̂=X⁺y projects y onto the column space of X, and whatever is left over — the residual e — is always exactly perpendicular to every column of X.",
-    example: "For X=[[1,3],[2,6]] (its second column is 3× the first, so rank(X)=1) and y=[5,2]: X⁺=[[0.02,0.04],[0.06,0.12]], β̂=X⁺y=[0.18,0.54], ŷ=Xβ̂=[1.8,3.6], e=y−ŷ=[3.2,−1.6]. Check: Xᵀe=[0,0].",
-    formula: "P=XX⁺ (projection onto col(X))   •   β̂=X⁺y   •   ŷ=Xβ̂=Py   •   e=y−ŷ=(I−P)y always satisfies Xᵀe=0",
-    ml: "This is exactly what fitting a regression model does on a real dataset with many features and rows: X⁺ (equal to (XᵀX)⁻¹Xᵀ whenever X has full column rank) turns the whole least-squares problem into one projection, and Xᵀe=0 is the guarantee that a fitted model has already extracted everything the features can explain — anything left in e is orthogonal to that information.",
+    meaning: "Least squares (1.16) minimised SSE to fit one line. The pseudoinverse X⁺ generalises that into one matrix recipe with four steps, in order: (1) check whether X's columns are redundant — that's rank, (2) project y onto whatever those columns can reach — that reachable set is the column space, (3) β̂=X⁺y reads off the coefficients of that projection so ŷ=Xβ̂ is the closest point to y inside the column space, and (4) whatever y couldn't reach — the residual e=y−ŷ — is always exactly perpendicular to every column of X.",
+    example: "X=[[1,3],[2,6]] — column 2 is 3× column 1, so rank(X)=1 and both columns collapse onto one line. Step 1: X⁺=[[0.02,0.04],[0.06,0.12]]. Step 2: for y=[5,2], β̂=X⁺y=[0.18,0.54]. Step 3: ŷ=Xβ̂=[1.8,3.6], the closest reachable point to y. Step 4: e=y−ŷ=[3.2,−1.6], and Xᵀe=[0,0] confirms e is perpendicular to both columns.",
+    formula: "rank(X): are columns independent?   •   P=XX⁺ projects onto col(X)   •   β̂=X⁺y   •   ŷ=Xβ̂=Py   •   proof: e=(I−P)y ⟹ Xᵀe=0",
+    ml: "This is exactly what fitting a regression model does on a real dataset with many features and rows: X⁺ (equal to (XᵀX)⁻¹Xᵀ whenever X has full column rank) turns the whole least-squares problem into one projection. In Task 3 this is the same four-step recipe scaled up: rank, column space and null space of X (part a, 14 marks) → the projection formula (part b, 12 marks) → computing X⁺, β̂ and ŷ on your chosen dataset (part c, 12 marks) → proving Xᵀe=0 (part d, 12 marks).",
     check: { q: "If e=y−ŷ is the residual of a least-squares fit and Xᵀe=0, what does that tell us?", options: ["e is parallel to every column of X", "e is perpendicular to every column of X", "e must be the zero vector"], answer: 1, why: "Xᵀe=0 means e's dot product with every column of X is zero — by definition e is orthogonal to the whole column space, not necessarily zero itself." },
   },
 ];
@@ -646,8 +646,13 @@ function PseudoinverseLab(){
   const yhx=x1a*t,yhy=x1b*t,ex=ya-yhx,ey=yb-yhy;
   const cte1=x1a*ex+x1b*ey,cte2=(k*x1a)*ex+(k*x1b)*ey,eLen=Math.hypot(ex,ey);
   const uLen=Math.hypot(x1a,x1b)||1,dirX=x1a/uLen,dirY=x1b/uLen,zeroU=uLen<.01;
+  const eLenSafe=eLen||1,edx=ex/eLenSafe,edy=ey/eLenSafe;
+  const toScreenDir=(dx:number,dy:number):[number,number]=>{const px=dx*42,py=-dy*42,m=Math.hypot(px,py)||1;return [px/m,py/m]};
+  const[a1x,a1y]=toScreenDir(-dirX,-dirY),[a2x,a2y]=toScreenDir(edx,edy);
+  const rSize=11,rcx=sx(yhx),rcy=sy(yhy),rp1x=rcx+a1x*rSize,rp1y=rcy+a1y*rSize,rp3x=rcx+a2x*rSize,rp3y=rcy+a2y*rSize,rp2x=rp1x+a2x*rSize,rp2y=rp1y+a2y*rSize;
+  const showRightAngle=!zeroU&&eLen>0.05;
   const snap=()=>{setYa(Number((2*x1a).toFixed(2)));setYb(Number((2*x1b).toFixed(2)))};
-  return <LabShell title="Project y onto a column space with the pseudoinverse" goal="X's second column is k times its first, so both columns share one line — the column space. X⁺ finds the exact point on that line closest to y; the leftover is always perpendicular to it.">
+  return <LabShell title="Project y onto a column space with the pseudoinverse" goal="X's second column is k times its first, so both columns share one line — the column space. X⁺ finds the exact point on that line closest to y; the leftover is always perpendicular to it (watch for the small right-angle mark).">
     <div className="u1-presets"><button onClick={snap}><WandSparkles/>Snap y onto the column space</button><button onClick={()=>{setX1a(1);setX1b(2);setK(3);setYa(5);setYb(2)}}><RotateCcw/>Reset defaults</button></div>
     <div className="u1-lab-grid"><div className="u1-controls">
       <div className="u1-control-pair"><NumberBox label="column 1: u.x" value={x1a} onChange={setX1a}/><NumberBox label="column 1: u.y" value={x1b} onChange={setX1b}/></div>
@@ -655,17 +660,39 @@ function PseudoinverseLab(){
       <div className="u1-control-pair"><NumberBox label="target y.x" value={ya} onChange={setYa}/><NumberBox label="target y.y" value={yb} onChange={setYb}/></div>
       <div className="u1-matrix-input"><span>X =</span><div><b>{f(x1a)}</b><b>{f(k*x1a)}</b><b>{f(x1b)}</b><b>{f(k*x1b)}</b></div></div>
       <div className="u1-matrix-input"><span>X⁺ =</span><div><b>{f(xp00)}</b><b>{f(xp01)}</b><b>{f(xp10)}</b><b>{f(xp11)}</b></div></div>
-      <div className="u1-equation-stack"><span>β̂ = X⁺y = [{f(beta0)}, {f(beta1)}]</span><span>ŷ = Xβ̂ = [{f(yhx)}, {f(yhy)}]</span><span>e = y − ŷ = [{f(ex)}, {f(ey)}]</span></div>
       <div className="u1-stats"><Stat label="rank(X)" value={zeroU?"0":"1"} note="both columns share one direction"/><Stat label="‖e‖ (distance to column space)" value={f(eLen)} good={eLen<.01}/><Stat label="Xᵀe (col 1)" value={f(cte1,4)} good={Math.abs(cte1)<.001}/><Stat label="Xᵀe (col 2)" value={f(cte2,4)} good={Math.abs(cte2)<.001}/></div>
     </div>
-      <div className="u1-visual"><Plane>
+      <div className="u1-visual"><Plane label={`Coordinate plane: target y in purple, the column-space direction u in coral, the projection y-hat in green, and a dashed perpendicular residual between y-hat and y${showRightAngle?" with a small right-angle mark confirming orthogonality":""}`}>
         {!zeroU&&<line x1={sx(-dirX*6)} y1={sy(-dirY*6)} x2={sx(dirX*6)} y2={sy(dirY*6)} className="u1-span-line"/>}
         <line x1={sx(0)} y1={sy(0)} x2={sx(x1a)} y2={sy(x1b)} className="u1-v2" markerEnd="url(#arrow-coral)"/>
         <line x1={sx(0)} y1={sy(0)} x2={sx(ya)} y2={sy(yb)} className="u1-v1" markerEnd="url(#arrow-purple)"/>
         <line x1={sx(0)} y1={sy(0)} x2={sx(yhx)} y2={sy(yhy)} className="u1-vsum" markerEnd="url(#arrow-green)"/>
         <line x1={sx(yhx)} y1={sy(yhy)} x2={sx(ya)} y2={sy(yb)} className="u1-residual-line"/>
-      </Plane><div className="u1-legend"><span className="v1">target y</span><span className="v2">column space direction</span><span className="sum">ŷ = Xβ̂ (projection)</span></div></div></div>
-    <div className={`u1-observation ${zeroU?"warn":""}`}><Sigma/><p>{zeroU?<><b>u is the zero vector:</b> X has no columns to project onto.</>:eLen<.01?<><b>Perfect fit:</b> y already sits on the column space, so e=0 and there's nothing left to explain.</>:<><b>Orthogonality confirmed:</b> Xᵀe=[{f(cte1,4)}, {f(cte2,4)}] ≈ [0,0] — the dashed residual is exactly perpendicular to the column-space line, whatever y you choose. With a real dataset of many features and rows, the same X⁺y (or (XᵀX)⁻¹Xᵀy) formula does this projection in one step.</>}</p></div>
+        {showRightAngle&&<path d={`M ${rp1x} ${rp1y} L ${rp2x} ${rp2y} L ${rp3x} ${rp3y}`} className="u1-angle-arc"/>}
+        <text x={sx(ya)+9} y={sy(yb)-6} style={{fill:"#6d4aff",fontSize:"11px",fontWeight:800}}>y</text>
+        <text x={sx(x1a)+9} y={sy(x1b)-6} style={{fill:"#ec5d67",fontSize:"11px",fontWeight:800}}>u</text>
+        <text x={sx(yhx)+9} y={sy(yhy)-6} style={{fill:"#0e9f6e",fontSize:"11px",fontWeight:800}}>ŷ</text>
+      </Plane><div className="u1-legend"><span className="v1">target y</span><span className="v2">column space direction u</span><span className="sum">ŷ = Xβ̂ (projection)</span>{showRightAngle&&<span className="angle">⊥ residual</span>}</div></div></div>
+    <div className="u1-equation-stack">
+      <span>Step 1 — rank: column 2 = {f(k)} × column 1 = [{f(k*x1a)}, {f(k*x1b)}] → columns are dependent, rank(X) = {zeroU?"0":"1"}</span>
+      <span>Step 2 — X⁺ (shown above) = w·uᵀ/(‖u‖²‖w‖²), with u=[{f(x1a)},{f(x1b)}] and w=[1,{f(k)}]</span>
+      <span>Step 3a — β̂₀ = ({f(xp00)})({f(ya)}) + ({f(xp01)})({f(yb)}) = <b>{f(beta0)}</b></span>
+      <span>Step 3b — β̂₁ = ({f(xp10)})({f(ya)}) + ({f(xp11)})({f(yb)}) = <b>{f(beta1)}</b></span>
+      <span>Step 4 — ŷ = Xβ̂ = [{f(yhx)}, {f(yhy)}]</span>
+      <span>Step 5 — e = y − ŷ = [{f(ex)}, {f(ey)}]</span>
+      <span>Step 6a — column 1 · e = ({f(x1a)})({f(ex)}) + ({f(x1b)})({f(ey)}) = <b>{f(cte1,4)}</b></span>
+      <span>Step 6b — column 2 · e = ({f(k*x1a)})({f(ex)}) + ({f(k*x1b)})({f(ey)}) = <b>{f(cte2,4)}</b></span>
+    </div>
+    <div className={`u1-observation ${zeroU?"warn":""}`}><Sigma/><p>{zeroU?<><b>u is the zero vector:</b> X has no columns to project onto.</>:eLen<.01?<><b>Perfect fit:</b> y already sits on the column space, so e=0 and there's nothing left to explain.</>:<><b>Orthogonality confirmed:</b> Xᵀe=[{f(cte1,4)}, {f(cte2,4)}] ≈ [0,0] — the dashed residual is exactly perpendicular to the column-space line (see the right-angle mark), whatever y you choose. With a real dataset of many features and rows, the same X⁺y (or (XᵀX)⁻¹Xᵀy) formula does this projection in one step.</>}</p></div>
+    <h4 style={{fontSize:"13px",margin:"18px 0 8px",color:"#172033"}}>Bridge to Task 3</h4>
+    <div className="u1-calc-table">
+      <div style={{gridTemplateColumns:"1.5fr 1.9fr .5fr"}}><b>This demo</b><b>Task 3 (your real dataset)</b><b>Marks</b></div>
+      <div style={{gridTemplateColumns:"1.5fr 1.9fr .5fr"}}><span>Check rank(X) — columns collapse onto one line</span><span>(a) Rank, column space & null space of X</span><span>14</span></div>
+      <div style={{gridTemplateColumns:"1.5fr 1.9fr .5fr"}}><span>β̂ = X⁺y and ŷ = Xβ̂</span><span>(b) State and apply the projection formula</span><span>12</span></div>
+      <div style={{gridTemplateColumns:"1.5fr 1.9fr .5fr"}}><span>Compute X⁺, β̂ and ŷ for this 2×2 example</span><span>(c) Compute β̂, ŷ and e on your chosen dataset</span><span>12</span></div>
+      <div style={{gridTemplateColumns:"1.5fr 1.9fr .5fr"}}><span>Confirm Xᵀe = [0, 0]</span><span>(d) Prove residual orthogonality</span><span>12</span></div>
+      <footer><b>Task 3 total</b><strong>50 marks</strong></footer>
+    </div>
   </LabShell>
 }
 
