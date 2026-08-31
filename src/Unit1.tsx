@@ -266,6 +266,18 @@ const chapters: Chapter[] = [
     ml: "This same pattern appears in regression, embeddings, attention layers and deep neural networks.",
     check: { q: "In ŷ=Xβ, what does each row of X represent?", options: ["One observation", "One model", "One target only"], answer: 0, why: "Rows are observations; columns are input features." },
   },
+  {
+    id: "pseudoinverse",
+    number: "1.19",
+    title: "Pseudoinverse projection and residual orthogonality",
+    short: "Projection & orthogonality",
+    icon: Sigma,
+    meaning: "Least squares (1.16) fit one line by minimising SSE. The pseudoinverse X⁺ packages that same idea into one matrix formula that works for any number of features and observations: β̂=X⁺y projects y onto the column space of X, and whatever is left over — the residual e — is always exactly perpendicular to every column of X.",
+    example: "For X=[[1,3],[2,6]] (its second column is 3× the first, so rank(X)=1) and y=[5,2]: X⁺=[[0.02,0.04],[0.06,0.12]], β̂=X⁺y=[0.18,0.54], ŷ=Xβ̂=[1.8,3.6], e=y−ŷ=[3.2,−1.6]. Check: Xᵀe=[0,0].",
+    formula: "P=XX⁺ (projection onto col(X))   •   β̂=X⁺y   •   ŷ=Xβ̂=Py   •   e=y−ŷ=(I−P)y always satisfies Xᵀe=0",
+    ml: "This is exactly what fitting a regression model does on a real dataset with many features and rows: X⁺ (equal to (XᵀX)⁻¹Xᵀ whenever X has full column rank) turns the whole least-squares problem into one projection, and Xᵀe=0 is the guarantee that a fitted model has already extracted everything the features can explain — anything left in e is orthogonal to that information.",
+    check: { q: "If e=y−ŷ is the residual of a least-squares fit and Xᵀe=0, what does that tell us?", options: ["e is parallel to every column of X", "e is perpendicular to every column of X", "e must be the zero vector"], answer: 1, why: "Xᵀe=0 means e's dot product with every column of X is zero — by definition e is orthogonal to the whole column space, not necessarily zero itself." },
+  },
 ];
 
 const missions: Record<string, string[]> = {
@@ -287,6 +299,7 @@ const missions: Record<string, string[]> = {
   "least-squares": ["Beat SSE=2 using the sliders.", "Reveal the best fit and verify its SSE.", "Switch to perfect data and obtain SSE=0."],
   gradient: ["Take one gradient step and observe SSE.", "Compare learning rates 0.001 and 0.02.", "Find a learning rate that overshoots or becomes unstable."],
   "ml-bridge": ["Make Student 1's prediction equal 5.", "Set one feature weight to zero and interpret it.", "Use a negative weight and explain its effect on predictions."],
+  pseudoinverse: ["Build a rank-1 X (make column 2 a multiple of column 1) and compute X⁺ by hand from the formula shown.", "Move y around and confirm ŷ always lands on the column-space line, never off it.", "Confirm Xᵀe stays at [0,0] for every y you try, and explain why that must always be true."],
 };
 
 const pythonByChapter: Record<string, { code: string; output: string }> = {
@@ -308,6 +321,7 @@ const pythonByChapter: Record<string, { code: string; output: string }> = {
   "least-squares": { code: "X = np.c_[np.ones(len(x)), x]\nbeta = np.linalg.lstsq(X, y, rcond=None)[0]\ny_hat = X @ beta\nSSE = np.sum((y - y_hat)**2)", output: "beta = [intercept, slope]\nSSE = sum of squared residuals" },
   gradient: { code: "for step in range(1000):\n    error = (m*x + b) - y\n    m -= alpha * 2*np.mean(error*x)\n    b -= alpha * 2*np.mean(error)\nprint(m, b)", output: "Parameters move toward the least-squares solution." },
   "ml-bridge": { code: "X = np.array([[1,1,2], [1,2,3], [1,3,4]])\nbeta = np.array([1, 2, 0.5])\nprint(X @ beta)", output: "[4.  6.5 9. ]" },
+  pseudoinverse: { code: "X = np.array([[1., 3.], [2., 6.]])\ny = np.array([5., 2.])\nXplus = np.linalg.pinv(X)\nbeta = Xplus @ y\ny_hat = X @ beta\ne = y - y_hat\nprint(beta, y_hat, e)\nprint(X.T @ e)", output: "[0.18 0.54] [1.8 3.6] [3.2 -1.6]\n[0. 0.]" },
 };
 
 const f = (n: number, digits = 2) => Number.isFinite(n) ? n.toFixed(digits).replace(/\.00$/, "") : "—";
@@ -624,6 +638,37 @@ function MLBridgeLab(){
   return <LabShell title="One equation becomes a batch prediction" goal="Treat rows as students and columns as features. Matrix multiplication predicts everyone at once."><div className="u1-batch"><div className="u1-matrix-card"><span>Design matrix X</span><div className="u1-array">{data.map((r,i)=><i key={i}><em>1</em><em>{r[0]}</em><em>{r[1]}</em></i>)}</div><small>columns: intercept, hours, tasks</small></div><div className="u1-times">×</div><div className="u1-matrix-card weights"><span>Coefficients β</span><MiniRange label="intercept" value={w0} min={-2} max={4} step={.5} onChange={setW0}/><MiniRange label="hours weight" value={w1} min={-2} max={4} step={.5} onChange={setW1}/><MiniRange label="tasks weight" value={w2} min={-2} max={4} step={.5} onChange={setW2}/></div><div className="u1-times">=</div><div className="u1-matrix-card result"><span>Predictions ŷ</span>{pred.map((v,i)=><strong key={i}>Student {i+1}: {f(v)}</strong>)}</div></div><div className="u1-flow-strip"><span><b>Raw observations</b>3 students × 2 features</span><ArrowRight/><span><b>Design matrix</b>Add intercept column</span><ArrowRight/><span><b>Matrix product</b>Xβ</span><ArrowRight/><span><b>Predictions</b>One per student</span></div></LabShell>
 }
 
+function PseudoinverseLab(){
+  const[x1a,setX1a]=useState(1),[x1b,setX1b]=useState(2),[k,setK]=useState(3),[ya,setYa]=useState(5),[yb,setYb]=useState(2);
+  const u2=x1a*x1a+x1b*x1b,w2=1+k*k,den=(u2*w2)||1;
+  const xp00=x1a/den,xp01=x1b/den,xp10=k*x1a/den,xp11=k*x1b/den;
+  const beta0=xp00*ya+xp01*yb,beta1=xp10*ya+xp11*yb,t=beta0+k*beta1;
+  const yhx=x1a*t,yhy=x1b*t,ex=ya-yhx,ey=yb-yhy;
+  const cte1=x1a*ex+x1b*ey,cte2=(k*x1a)*ex+(k*x1b)*ey,eLen=Math.hypot(ex,ey);
+  const uLen=Math.hypot(x1a,x1b)||1,dirX=x1a/uLen,dirY=x1b/uLen,zeroU=uLen<.01;
+  const snap=()=>{setYa(Number((2*x1a).toFixed(2)));setYb(Number((2*x1b).toFixed(2)))};
+  return <LabShell title="Project y onto a column space with the pseudoinverse" goal="X's second column is k times its first, so both columns share one line — the column space. X⁺ finds the exact point on that line closest to y; the leftover is always perpendicular to it.">
+    <div className="u1-presets"><button onClick={snap}><WandSparkles/>Snap y onto the column space</button><button onClick={()=>{setX1a(1);setX1b(2);setK(3);setYa(5);setYb(2)}}><RotateCcw/>Reset defaults</button></div>
+    <div className="u1-lab-grid"><div className="u1-controls">
+      <div className="u1-control-pair"><NumberBox label="column 1: u.x" value={x1a} onChange={setX1a}/><NumberBox label="column 1: u.y" value={x1b} onChange={setX1b}/></div>
+      <MiniRange label="column 2 = k × column 1" value={k} min={-3} max={3} step={.25} onChange={setK}/>
+      <div className="u1-control-pair"><NumberBox label="target y.x" value={ya} onChange={setYa}/><NumberBox label="target y.y" value={yb} onChange={setYb}/></div>
+      <div className="u1-matrix-input"><span>X =</span><div><b>{f(x1a)}</b><b>{f(k*x1a)}</b><b>{f(x1b)}</b><b>{f(k*x1b)}</b></div></div>
+      <div className="u1-matrix-input"><span>X⁺ =</span><div><b>{f(xp00)}</b><b>{f(xp01)}</b><b>{f(xp10)}</b><b>{f(xp11)}</b></div></div>
+      <div className="u1-equation-stack"><span>β̂ = X⁺y = [{f(beta0)}, {f(beta1)}]</span><span>ŷ = Xβ̂ = [{f(yhx)}, {f(yhy)}]</span><span>e = y − ŷ = [{f(ex)}, {f(ey)}]</span></div>
+      <div className="u1-stats"><Stat label="rank(X)" value={zeroU?"0":"1"} note="both columns share one direction"/><Stat label="‖e‖ (distance to column space)" value={f(eLen)} good={eLen<.01}/><Stat label="Xᵀe (col 1)" value={f(cte1,4)} good={Math.abs(cte1)<.001}/><Stat label="Xᵀe (col 2)" value={f(cte2,4)} good={Math.abs(cte2)<.001}/></div>
+    </div>
+      <div className="u1-visual"><Plane>
+        {!zeroU&&<line x1={sx(-dirX*6)} y1={sy(-dirY*6)} x2={sx(dirX*6)} y2={sy(dirY*6)} className="u1-span-line"/>}
+        <line x1={sx(0)} y1={sy(0)} x2={sx(x1a)} y2={sy(x1b)} className="u1-v2" markerEnd="url(#arrow-coral)"/>
+        <line x1={sx(0)} y1={sy(0)} x2={sx(ya)} y2={sy(yb)} className="u1-v1" markerEnd="url(#arrow-purple)"/>
+        <line x1={sx(0)} y1={sy(0)} x2={sx(yhx)} y2={sy(yhy)} className="u1-vsum" markerEnd="url(#arrow-green)"/>
+        <line x1={sx(yhx)} y1={sy(yhy)} x2={sx(ya)} y2={sy(yb)} className="u1-residual-line"/>
+      </Plane><div className="u1-legend"><span className="v1">target y</span><span className="v2">column space direction</span><span className="sum">ŷ = Xβ̂ (projection)</span></div></div></div>
+    <div className={`u1-observation ${zeroU?"warn":""}`}><Sigma/><p>{zeroU?<><b>u is the zero vector:</b> X has no columns to project onto.</>:eLen<.01?<><b>Perfect fit:</b> y already sits on the column space, so e=0 and there's nothing left to explain.</>:<><b>Orthogonality confirmed:</b> Xᵀe=[{f(cte1,4)}, {f(cte2,4)}] ≈ [0,0] — the dashed residual is exactly perpendicular to the column-space line, whatever y you choose. With a real dataset of many features and rows, the same X⁺y (or (XᵀX)⁻¹Xᵀy) formula does this projection in one step.</>}</p></div>
+  </LabShell>
+}
+
 function ChapterLab({ id }: { id: string }){
   if(id==="vectors") return <SingleVectorLab/>;
   if(id==="vector-addition") return <VectorLab/>;
@@ -642,6 +687,8 @@ function ChapterLab({ id }: { id: string }){
   if(id==="eigen") return <EigenLab/>;
   if(id==="least-squares") return <LeastSquaresLab/>;
   if(id==="gradient") return <GradientLab/>;
+  if(id==="ml-bridge") return <MLBridgeLab/>;
+  if(id==="pseudoinverse") return <PseudoinverseLab/>;
   return <MLBridgeLab/>;
 }
 
